@@ -15,3 +15,8 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# 内部研发文档，不推公开仓库
+ENGINEERING-PROMPT-*.md
+REDESIGN-PROMPT.md
+QA.md
