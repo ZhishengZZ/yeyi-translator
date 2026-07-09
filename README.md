@@ -1,87 +1,83 @@
-# Yeyi · 雅译 — AI Webpage Translation for Chrome
+<div align="center">
 
-**English** | [简体中文](./README.zh-CN.md)
+<img src="./src/assets/yeyi-icon-128.png" width="96" height="96" alt="Yeyi logo" />
 
-![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
-![Version](https://img.shields.io/badge/version-0.4.0--preview-orange)
-![Chrome MV3](https://img.shields.io/badge/Chrome-MV3-brightgreen)
+# Yeyi · 雅译
 
-Yeyi (雅译) is a lightweight, open-source AI webpage-translation extension for
-Chrome. You bring your own OpenAI-compatible API key; Yeyi translates ordinary
-articles, blogs, and documentation **paragraph by paragraph, right in the page**.
+**AI webpage translation you actually control — bring your own key, read anything, in your own words.**
 
-> **0.4.0 preview.** Native JavaScript, Manifest V3, no build step, no third-party dependencies.
+[![License](https://img.shields.io/badge/License-GPLv3-4c8eda?style=flat-square)](./LICENSE)
+[![Release](https://img.shields.io/badge/release-0.4.0--preview-f0883e?style=flat-square)](https://github.com/ZhishengZZ/yeyi-translator/releases)
+[![Chrome MV3](https://img.shields.io/badge/Chrome-Manifest%20V3-3fb950?style=flat-square)](#-install)
+[![Dependencies](https://img.shields.io/badge/dependencies-zero-8957e5?style=flat-square)](#)
 
-## Why Yeyi
+**English** · [简体中文](./README.zh-CN.md)
 
-- **Native Chrome-style UI.** The popup, options page, and new-tab page share one
-  Chrome Settings design language — the same typography, radius, buttons, cards,
-  and rows. The new-tab page faithfully recreates the native Google search capsule
-  (voice + Lens), the colored Google logo, and your most-visited tiles. It feels
-  like part of the browser, not a bolted-on panel.
-- **A search box that translates.** Type Chinese in the new-tab search box and
-  Yeyi suggests an English query you can drop straight into search — cross-language
-  searching without leaving the box. (Experimental, opt-in.)
-- **Six deliberate translation styles.** `信达雅` (Xin-Da-Ya) is the signature
-  default — a faithful / expressive / elegant mode tuned from a lot of
-  translation-theory research (Yan Fu; Nida's functional equivalence). Plus
-  `精准忠实` (precise), `自然中文` (natural), `技术文档` (technical),
-  `商务正式` (business), and `文学润色` (literary) — each with its own fidelity,
-  tone, and terminology boundaries.
-- **An engine that doesn't miss text.** 0.4 clusters every visible text node to
-  its nearest "block owner", so deeply nested div/span structures (React/Vue/Next
-  apps, docs sites, news) are fully collected — no missed paragraphs, and no
-  duplicate blocks from wrapper containers.
-- **Bilingual by default.** Original + translation side by side, or replace mode
-  with snapshot restore. Links inside translations stay clickable.
-- **Context refinement, on demand.** A manual second pass sends the page outline,
-  heading path, neighboring paragraphs, and previous draft back to the model to
-  re-calibrate hard professional text, terminology, pronouns, and idioms.
-- **Your key, your data.** No model or key is bundled. Your API key lives in
-  `chrome.storage.local`, is never injected into the page, and is never included
-  in exported config.
+</div>
 
-## Install (unpacked)
+---
 
-1. Download or clone this repo.
-2. Open `chrome://extensions/`.
-3. Enable **Developer mode**.
-4. **Load unpacked** → select the repo folder (the one containing `manifest.json`).
+Machine translation usually forces a choice: a walled garden that phones home, or a browser add-on that drops half the paragraphs and reads like a robot. **Yeyi** is the third option — a featherweight Chrome extension that plugs into *your* OpenAI-compatible model, translates whole pages cleanly in place, and hands you the dial on *how* the translation reads, right down to a `信达雅` mode built from real translation theory.
 
-## Configure
+No account. No bundled key. No telemetry. Just your model, your page, your call.
 
-Open the options page and fill in:
+## ✨ Why you'll like it
 
-- **API endpoint** — your OpenAI-compatible base URL (presets for DeepSeek, Qwen, Hunyuan, … to start from)
-- **Model** — per your provider's docs
-- **API key** — your provider key (never bundled, never exported)
-- Good defaults: target `简体中文`, display `双语对照` (bilingual), concurrency `4`, deep-thinking off (for speed).
+🎛️ **It feels like Chrome, not a plugin.**
+The popup, options, and new-tab page all speak Chrome's own design language. The new tab even rebuilds the native Google search bar — voice, Lens, the colored logo, your most-visited tiles — so nothing looks bolted on.
 
-Glossary — one term per line — is fed into the prompt and the cache key:
+🔎 **A search box that speaks English for you.**
+Type Chinese into the new-tab search box and Yeyi hands back a clean English query to search with. Cross-language search without breaking your stride. *(Opt-in.)*
+
+🎭 **Six translation voices, not one.**
+`信达雅` is the house style — faithful, fluent, and quietly elegant, shaped by Yan Fu and Nida's work on equivalence. Want a different register? Flip to **Precise**, **Natural**, **Technical**, **Business**, or **Literary** — each with its own rules for fidelity, tone, and terminology.
+
+🧩 **An engine that doesn't drop text.**
+Yeyi clusters every visible text node onto the block it really belongs to, so deeply nested layouts (React/Vue/Next apps, docs sites, news) get translated in full — no skipped paragraphs, no duplicate blocks spat out by wrapper `<div>`s.
+
+📖 **Bilingual by default, surgical on demand.**
+Read the original and the translation side by side, or replace in place and restore with one click. Hit a dense passage? One tap runs a context-aware second pass using the page outline, headings, and neighboring paragraphs.
+
+🔐 **Your key never leaves your browser.**
+It lives in `chrome.storage.local`, is never injected into the page, and never shows up in an exported config.
+
+## 🚀 Install
+
+> Preview build — load it unpacked.
+
+1. Grab the [latest release zip](https://github.com/ZhishengZZ/yeyi-translator/releases) (or clone this repo).
+2. Open `chrome://extensions/` and switch on **Developer mode** (top-right).
+3. Click **Load unpacked** and choose the folder that directly contains **`manifest.json`**.
+
+## ⚙️ Configure
+
+Open the options page and fill in three things:
+
+| Field | What to enter |
+| :-- | :-- |
+| **Endpoint** | Your OpenAI-compatible base URL (DeepSeek / Qwen / Hunyuan presets to start from) |
+| **Model** | Whatever your provider lists |
+| **API key** | Your key — never bundled, never exported |
+
+Good defaults: target **简体中文**, **bilingual** display, concurrency **4**, deep-thinking **off** for speed.
+
+Glossary — one term per line, fed into both the prompt and the cache key:
 
 ```text
 prompt = 提示词
 agent = 智能体
 ```
 
-## Translation styles
+## 🎭 Translation styles
 
-`信达雅` stays the default signature style; the others are separated by explicit
-prompt boundaries so they genuinely differ in fidelity, natural Chinese rhythm,
-terminology stability, formality, and literary latitude. See
-[docs/PRODUCT.md](./docs/PRODUCT.md).
+`信达雅` stays the default. The rest aren't just relabeled prompts — each draws a hard line on fidelity, natural rhythm, terminology, formality, and how much literary latitude the model gets. Full breakdown in [docs/PRODUCT.md](./docs/PRODUCT.md).
 
-## Credits & License
+## 🙏 Credits & License
 
-Yeyi's DOM translation engine is **ported and adapted from
-[Read Frog](https://github.com/mengxi-ream/read-frog)** (GPL-3.0). Because of that,
-**Yeyi as a whole is released under the GNU GPL v3.0**. Full attribution and the
-list of modifications are in [CREDITS.md](./CREDITS.md); the license text is in
-[LICENSE](./LICENSE).
+Yeyi's DOM translation engine is **ported and adapted from [Read Frog](https://github.com/mengxi-ream/read-frog)** (GPL-3.0). Because of that, **Yeyi is released under the GNU GPL v3.0** — full attribution and the list of changes are in [CREDITS.md](./CREDITS.md), and the license text is in [LICENSE](./LICENSE).
 
-Thanks to the Read Frog project and its author **mengxi-ream** for the open-source
-engine Yeyi builds on.
+Big thanks to **[@mengxi-ream](https://github.com/mengxi-ream)** and the Read Frog project for the engine Yeyi stands on. 🐸
 
-## Status
+## 🧪 Status
 
-**0.4.0 preview** — usable but pre-release; expect rough edges. Issues and PRs welcome.
+**0.4.0 · preview** — real and usable, still pre-release, so expect a few rough edges. Issues and PRs welcome.

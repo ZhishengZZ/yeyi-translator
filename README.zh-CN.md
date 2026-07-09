@@ -1,74 +1,83 @@
-# 雅译 · Yeyi — Chrome AI 网页翻译扩展
+<div align="center">
 
-[English](./README.md) | **简体中文**
+<img src="./src/assets/yeyi-icon-128.png" width="96" height="96" alt="雅译" />
 
-![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
-![Version](https://img.shields.io/badge/version-0.4.0--preview-orange)
-![Chrome MV3](https://img.shields.io/badge/Chrome-MV3-brightgreen)
+# 雅译 · Yeyi
 
-雅译是一个轻量、开源的 Chrome AI 网页翻译扩展。你填自己的 OpenAI 兼容 API Key，
-雅译就在网页里对文章、博客、文档做**段落级翻译**。
+**网页翻译，交给你自己的模型 —— 自带 Key、原地读全文、还讲究信达雅。**
 
-> **0.4.0 预览版。** 原生 JavaScript，Manifest V3，无构建步骤、无第三方依赖。
+[![License](https://img.shields.io/badge/许可证-GPLv3-4c8eda?style=flat-square)](./LICENSE)
+[![Release](https://img.shields.io/badge/版本-0.4.0--preview-f0883e?style=flat-square)](https://github.com/ZhishengZZ/yeyi-translator/releases)
+[![Chrome MV3](https://img.shields.io/badge/Chrome-Manifest%20V3-3fb950?style=flat-square)](#-安装)
+[![Dependencies](https://img.shields.io/badge/依赖-零-8957e5?style=flat-square)](#)
 
-## 为什么用雅译
+[English](./README.md) · **简体中文**
 
-- **原生 Chrome 风格界面。** 弹窗、设置页、新标签页共用同一套 Chrome Settings
-  设计语言——一致的字体、圆角、按钮、卡片与列表行。新标签页原生复刻了 Google
-  搜索胶囊（语音 + Lens）、彩色 Google Logo 和常用磁贴，用起来像浏览器自带的
-  一部分，而不是外挂面板。
-- **能翻译的搜索框。** 在新标签页搜索框输入中文，雅译会给出可直接搜索的英文
-  查询词——不离开搜索框就能跨语言搜索。（实验功能，需手动开启。）
-- **六档精心区分的翻译风格。** `信达雅` 是招牌默认风格：忠实、通达、雅致，基于
-  大量翻译理论资料打磨（严复「信达雅」、奈达功能对等）。另有 `精准忠实`、
-  `自然中文`、`技术文档`、`商务正式`、`文学润色`，各自在忠实度、语气和术语
-  边界上真正不同。
-- **不漏字的引擎。** 0.4 把每个可见文本节点聚类到最近的「块拥有者」，任意
-  div/span 深层套娃（React/Vue/Next 应用、文档站、新闻站）都能完整收录——不漏段，
-  也不因包裹容器产生重复译块。
-- **默认双语对照。** 原文 + 译文并排，或替换模式（按快照恢复原文）。译文里的
-  链接依然可点。
-- **按需上下文精翻。** 手动触发的二次校准，会把页面大纲、标题路径、前后段和
-  上一版译文送去重译，专治难啃的专业长文、术语、指代和习语。
-- **你的 Key，你的数据。** 不内置任何模型或 Key。API Key 只存在
-  `chrome.storage.local`，不注入页面，导出配置也不含 Key。
+</div>
 
-## 安装（开发者模式）
+---
 
-1. 下载或克隆本仓库。
-2. 打开 `chrome://extensions/`。
-3. 开启**开发者模式**。
-4. 点「**加载已解压的扩展程序**」→ 选本仓库文件夹（含 `manifest.json` 的那层）。
+机翻常逼你二选一：要么被圈在别人家会偷偷上报的围墙里，要么装个插件却满屏漏译、还一股机器腔。**雅译**是第三条路——一个轻到几乎没存在感的 Chrome 扩展，接上*你自己的* OpenAI 兼容模型，在原页面上把整页干干净净地译好，连译文的味道都交到你手里，招牌的 `信达雅` 模式更是照着翻译理论一点点磨出来的。
 
-## 配置
+不注册、不内置 Key、不上报数据。就你的模型、你的页面、你说了算。
 
-打开设置页填写：
+## ✨ 凭什么值得装
 
-- **接口地址** — 你的 OpenAI 兼容 base URL（内置 DeepSeek、Qwen、混元等预设起步）
-- **模型名称** — 按服务商文档填写
-- **API Key** — 你的模型服务密钥（不内置、不导出）
-- 推荐：目标语言 `简体中文`，默认 `双语对照`，并发 `4`，深度思考关闭（优先速度）。
+🎛️ **像 Chrome 自带的，不像外挂。**
+弹窗、设置页、新标签页都说着 Chrome 自己那套设计语言；新标签页干脆把原生 Google 搜索栏——语音、Lens、彩色 Logo、常用磁贴——照着复刻了一遍，没有一处看着是硬塞进去的。
 
-术语表——每行一个——会进入提示词和缓存键：
+🔎 **一个会替你说英文的搜索框。**
+在新标签页搜索框里敲中文，雅译顺手递回一条地道的英文查询词，直接拿去搜。跨语言搜索，不打断手感。*（需手动开启。）*
+
+🎭 **六种译笔，不止一种腔调。**
+`信达雅` 是招牌——忠实、通顺、还带点雅致，底子是严复和奈达的对等理论。想换个味儿？**精准忠实 / 自然中文 / 技术文档 / 商务正式 / 文学润色** 随你切，每种在忠实度、语气和术语上都各有各的规矩。
+
+🧩 **一个不漏字的引擎。**
+雅译把每个可见文字都归到它真正所属的块上，再深的套娃布局（React/Vue/Next 应用、文档站、新闻站）也能整段译全——不漏段，也不会被外层 `<div>` 带出重复译块。
+
+📖 **默认双语对照，难句还能再抠。**
+原文译文并排读，或者原地替换、一键还原。碰上啃不动的长难句？点一下，就带着页面大纲、标题层级和前后段再精译一遍。
+
+🔐 **你的 Key 不出浏览器。**
+只存在 `chrome.storage.local`，不注入页面，导出配置里也翻不出来。
+
+## 🚀 安装
+
+> 预览版，用「加载已解压的扩展程序」装。
+
+1. 下载 [最新 Release 压缩包](https://github.com/ZhishengZZ/yeyi-translator/releases)（或克隆本仓库）。
+2. 打开 `chrome://extensions/`，右上角开启**开发者模式**。
+3. 点**加载已解压的扩展程序**，选中**直接含 `manifest.json` 的那层文件夹**。
+
+## ⚙️ 配置
+
+设置页里填三样：
+
+| 项 | 填什么 |
+| :-- | :-- |
+| **接口地址** | 你的 OpenAI 兼容 base URL（可从 DeepSeek / Qwen / 混元 预设起步） |
+| **模型名称** | 按服务商文档填 |
+| **API Key** | 你自己的 Key——不内置、不导出 |
+
+推荐默认：目标语言 **简体中文**、**双语对照**、并发 **4**、深度思考**关**（更快）。
+
+术语表——每行一个，会一起进提示词和缓存键：
 
 ```text
 prompt = 提示词
 agent = 智能体
 ```
 
-## 翻译风格
+## 🎭 翻译风格
 
-`信达雅` 为默认招牌；其余风格用显式提示词边界隔开，在忠实度、中文读感、术语
-稳定性、正式语体和文学节奏上真正区分。详见 [docs/PRODUCT.md](./docs/PRODUCT.md)。
+`信达雅` 保持默认。其余几档不是换了名字的同一套提示词——每一档在忠实度、中文节奏、术语稳定性、正式程度、以及给模型多少润色空间上，都划了硬边界。详见 [docs/PRODUCT.md](./docs/PRODUCT.md)。
 
-## 署名与许可
+## 🙏 署名与许可
 
-雅译的 DOM 翻译引擎**移植并改编自 [Read Frog](https://github.com/mengxi-ream/read-frog)**
-（GPL-3.0）。因此**雅译整体以 GNU GPL v3.0 开源**。完整署名与改动清单见
-[CREDITS.md](./CREDITS.md)，许可证全文见 [LICENSE](./LICENSE)。
+雅译的 DOM 翻译引擎**移植并改编自 [Read Frog](https://github.com/mengxi-ream/read-frog)**（GPL-3.0）。因此**雅译整体以 GNU GPL v3.0 开源**——完整署名与改动清单见 [CREDITS.md](./CREDITS.md)，许可证全文见 [LICENSE](./LICENSE)。
 
-感谢 Read Frog 项目及其作者 **mengxi-ream** 提供的开源引擎。
+特别感谢 **[@mengxi-ream](https://github.com/mengxi-ream)** 和 Read Frog 项目，雅译正是站在它的引擎之上。🐸
 
-## 状态
+## 🧪 版本状态
 
-0.4.0 **预览版**——可用但属预发布，仍有毛边。欢迎提 Issue 和 PR。
+**0.4.0 · 预览版** —— 能用、好用，但还是预发布，难免有毛边。欢迎提 Issue 和 PR。
