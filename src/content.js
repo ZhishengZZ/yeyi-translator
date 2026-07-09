@@ -2,6 +2,9 @@
   if (window.__YEYI_CONTENT_LOADED__) return;
   window.__YEYI_CONTENT_LOADED__ = true;
 
+  // 是否顶层帧。子帧(iframe)只做翻译，不挂悬浮球 / 搜索助翻等可视 UI。
+  const IS_TOP = (window.top === window);
+
   // ─────────────────────────────────────────────────────────────────────────
   // 引擎移植自 read-frog（walk-and-label 段落检测 + block/inline 分类 + wrapper
   // 插入）。相较旧版「文本节点按块拥有者聚类」，改为先递归遍历整棵子树打标签、
@@ -184,7 +187,7 @@
     if (!settings.hasApiKey) {
       state.error = "请先在设置中配置 API Key。";
       renderStatus();
-      sendRuntimeMessage({ type: "YEYI_OPEN_OPTIONS" }).catch(() => {});
+      if (IS_TOP) sendRuntimeMessage({ type: "YEYI_OPEN_OPTIONS" }).catch(() => {});
       return publicStatus();
     }
 
@@ -1142,6 +1145,7 @@
   // ══════════════════════════ 搜索框助翻(沿用雅译) ══════════════════════════
 
   function setupSearchAssist(settings) {
+    if (!IS_TOP) return; // 搜索助翻只在顶层帧
     state.searchAssistEnabled = Boolean(settings?.searchBoxTranslate);
     state.searchAssistMode = settings?.searchBoxTranslateMode === "replace" ? "replace" : "suggest";
     if (!state.searchAssistEnabled || state.searchAssistReady) return;
@@ -1329,6 +1333,7 @@
   // ══════════════════════════ 悬浮球(沿用雅译) ══════════════════════════════
 
   function renderFloatingBall() {
+    if (!IS_TOP) return; // 悬浮球只在顶层帧
     const settings = state.settings || {};
     if (state.hiddenForHost || settings.showFloatingBall === false) {
       removeFloatingBall();
