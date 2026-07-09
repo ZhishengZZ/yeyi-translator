@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>雅译 Content Script Harness</title>
+    <link rel="stylesheet" href="src/content.css" />
+    <style>
+      body {
+        max-width: 780px;
+        margin: 36px auto;
+        font-family: Georgia, "Times New Roman", serif;
+        line-height: 1.75;
+      }
+
+      .controls {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        display: flex;
+        gap: 10px;
+        padding: 12px 0;
+        background: white;
+        font-family: system-ui, sans-serif;
+      }
+
+      button {
+        border: 1px solid #dce4e2;
+        border-radius: 8px;
+        background: white;
+        padding: 8px 12px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      pre {
+        padding: 16px;
+        background: #f3f5f7;
+      }
+    </style>
+    <script>
+      const listeners = [];
+      window.chrome = {
+        runtime: {
+          onMessage: {
+            addListener(handler) {
+              listeners.push(handler);
+            }
+          },
+          sendMessage(message) {
+            if (message.type === "YEYI_TRANSLATE_BATCH") {
+              const translations = Object.fromEntries(
+                message.items.map((item) => [item.id, `【测试译文】${item.text}`])
+              );
+              return Promise.resolve({
+                ok: true,
+                payload: { translations, cached: 0, requested: message.items.length }
+              });
+            }
+            return Promise.resolve({ ok: true, payload: {} });
+          }
+        }
+      };
+
+      window.__yeyiDispatch = (message) =>
+        new Promise((resolve) => {
+          const handler = listeners[0];
+          handler(message, {}, resolve);
+        });
+    </script>
+  </head>
+  <body>
+    <div class="controls">
+      <button id="start">双语翻译</button>
+      <button id="replace">替换翻译</button>
+      <button id="restore">恢复原文</button>
+      <button id="append">追加动态段落</button>
+    </div>
+
+    <article>
+      <h1>The future of browser translation is contextual</h1>
+      <p>
+        Traditional translation tools often process isolated sentences. A reader,
+        however, understands a page through paragraphs, headings, links, and the
+        surrounding purpose of the document.
+      </p>
+      <p>
+        A good AI translator should preserve technical terms, keep brand names
+        intact, and produce Chinese that feels written for a real person rather
+        than assembled word by word.
+      </p>
+      <pre><code>const apiKey = "do-not-translate-code";</code></pre>
+    </article>
+
+    <script src="src/content.js"></script>
+    <script>
+      document.querySelector("#start").addEventListener("click", () => {
+        window.__yeyiDispatch({
+          type: "YEYI_START",
+          settings: { mode: "bilingual", targetLanguage: "中文（简体）" }
+        });
+      });
+      document.querySelector("#replace").addEventListener("click", () => {
+        window.__yeyiDispatch({
+          type: "YEYI_START",
+          settings: { mode: "replace", targetLanguage: "中文（简体）" }
+        });
+      });
+      document.querySelector("#restore").addEventListener("click", () => {
+        window.__yeyiDispatch({ type: "YEYI_RESTORE" });
+      });
+      document.querySelector("#append").addEventListener("click", () => {
+        const p = document.createElement("p");
+        p.textContent =
+          "This paragraph was added dynamically after the first translation pass.";
+        document.querySelector("article").append(p);
+      });
+    </script>
+  </body>
+</html>
+

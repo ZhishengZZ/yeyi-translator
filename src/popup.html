@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>雅译</title>
+    <script>
+      document.documentElement.dataset.theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    </script>
+    <link rel="stylesheet" href="ui.css" />
+  </head>
+  <body class="popup-body">
+    <main class="popup-shell">
+      <header class="popup-header">
+        <div class="brand">
+          <span class="brand-mark">雅</span>
+          <div>
+            <h1>雅译</h1>
+            <p id="providerLine">未配置模型</p>
+          </div>
+        </div>
+        <div class="popup-header-tools">
+          <button class="tool-btn" id="themeToggle" type="button" title="切换主题">跟随</button>
+          <button class="icon-button" id="openOptions" title="设置" aria-label="设置">
+            <span aria-hidden="true">⚙</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="onboard-card" id="onboardCard" hidden>
+        <span class="kicker">开始使用</span>
+        <p>请先填写自己的模型接口和 API Key，配置完成后即可翻译当前页面。</p>
+        <button class="primary-button" id="onboardGo" type="button">去设置</button>
+      </section>
+
+      <button class="primary-button hero-button" id="mainAction" hidden>翻译此页</button>
+      <button class="secondary-button settings-link" id="contextRefine" hidden>上下文精翻</button>
+
+      <section class="popup-controls" id="popupControls" aria-label="翻译控制" hidden>
+        <div class="segmented" role="group" aria-label="显示模式">
+          <button type="button" data-mode="bilingual" id="modeBilingual">双语</button>
+          <button type="button" data-mode="replace" id="modeReplace">替换</button>
+        </div>
+
+        <label>
+          <span>翻译风格</span>
+          <select id="quality">
+            <option value="balanced">信达雅</option>
+            <option value="precise">精准忠实</option>
+            <option value="fluent">自然中文</option>
+            <option value="technical">技术文档</option>
+            <option value="business">商务正式</option>
+            <option value="literary">文学润色</option>
+          </select>
+        </label>
+
+        <label>
+          <span>本站自动翻译</span>
+          <select id="siteRule">
+            <option value="default">默认</option>
+            <option value="always">总是翻译</option>
+            <option value="never">永不翻译</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="progress-block" id="progressBlock" hidden>
+        <div class="progress-meta">
+          <span id="progressText">正在翻译</span>
+          <span id="progressCount">0 / 0</span>
+        </div>
+        <div class="progress-track">
+          <span id="progressBar"></span>
+        </div>
+      </section>
+
+      <button class="secondary-button settings-link" id="retryFailed" hidden>重试失败段</button>
+      <p class="error-line" id="errorLine" hidden></p>
+      <button class="secondary-button settings-link" id="goSettings" hidden>去设置</button>
+      <p class="hint" id="hintText">点击主按钮即可翻译当前页面。</p>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

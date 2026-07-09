@@ -1,0 +1,17 @@
+# dependencies / build output
+node_modules/
+dist/
+*.log
+
+# never commit secrets / keys
+.env
+.env.*
+*.key
+*.pem
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>新标签页</title>
+    <script>
+      // 早设主题，避免闪烁：默认跟随系统，theme.js 读到设置后再纠正。
+      document.documentElement.dataset.theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    </script>
+    <link rel="stylesheet" href="ui.css" />
+  </head>
+  <body class="ntp-body">
+    <main class="ntp settings-page">
+      <header class="settings-topbar ntp-topbar">
+        <div class="brand">
+          <span class="brand-mark">雅</span>
+          <div>
+            <h1>雅译搜索</h1>
+            <p>中文搜索词会先转成更适合检索的英文关键词。</p>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="secondary-button compact" id="themeToggle" type="button" title="切换主题">跟随系统</button>
+          <button class="secondary-button compact" id="disableOverride" type="button" title="隐藏或显示搜索建议">隐藏建议</button>
+        </div>
+      </header>
+
+      <section class="settings-section ntp-search-card">
+        <header><h2>搜索</h2></header>
+        <form class="ntp-search" id="searchForm" role="search">
+          <img class="ntp-search-lead" src="assets/search.svg" alt="" aria-hidden="true" />
+          <input id="queryInput" autocomplete="off" autofocus spellcheck="false"
+                 aria-label="搜索" placeholder="在 Google 上搜索，或输入网址" />
+          <div class="ntp-search-actions">
+            <button type="button" id="voiceBtn" class="ntp-iconbtn" title="语音搜索" aria-label="语音搜索">
+              <img src="assets/mic.svg" alt="" aria-hidden="true" />
+            </button>
+            <button type="button" id="lensBtn" class="ntp-iconbtn" title="Google 智能镜头" aria-label="Google 智能镜头">
+              <img src="assets/lens.svg" alt="" aria-hidden="true" />
+            </button>
+          </div>
+          <div class="ntp-omni" id="omni" hidden role="listbox">
+            <button type="button" class="ntp-omni-row" id="omniRow" role="option">
+              <img src="assets/search.svg" alt="" aria-hidden="true" />
+              <span class="ntp-omni-text" id="omniText"></span>
+              <span class="ntp-omni-tag" id="omniTag">英文搜索</span>
+            </button>
+          </div>
+        </form>
+        <p class="section-note">按 Enter 直接搜索；输入中文时会出现英文关键词建议，点击即可使用建议搜索。</p>
+      </section>
+
+      <section class="settings-section ntp-tiles-card">
+        <header><h2>常用网站</h2></header>
+        <div class="ntp-tiles" id="tiles" aria-label="常用网站"></div>
+      </section>
+    </main>
+    <script type="module" src="newtab.js"></script>
+  </body>
+</html>

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Yeyi Translator Test Page</title>
+    <style>
+      body {
+        max-width: 760px;
+        margin: 40px auto;
+        font-family: Georgia, "Times New Roman", serif;
+        line-height: 1.75;
+        color: #1f2933;
+      }
+
+      nav,
+      button,
+      input,
+      pre {
+        font-family: system-ui, sans-serif;
+      }
+
+      nav {
+        display: flex;
+        gap: 18px;
+        margin-bottom: 24px;
+      }
+
+      article {
+        border-top: 1px solid #d5dde5;
+        padding-top: 24px;
+      }
+
+      pre {
+        padding: 16px;
+        overflow: auto;
+        background: #f3f5f7;
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a href="#">Overview</a>
+      <a href="#">Research</a>
+      <a href="#">Contact</a>
+      <button type="button">Do not translate button</button>
+    </nav>
+
+    <form role="search" action="#">
+      <textarea id="siteSearch" name="q" rows="1" aria-label="Search" placeholder="搜索文章" autocomplete="off"></textarea>
+    </form>
+
+    <article>
+      <h1>The future of browser translation is contextual</h1>
+      <p>
+        Traditional translation tools often process <a href="#context">isolated sentences</a>. A reader,
+        however, understands a page through paragraphs, headings, links, and the
+        surrounding purpose of the document.
+      </p>
+      <p id="chineseParagraph">这一段已经是中文，目标语言为简体中文时不应该发送到模型服务。</p>
+      <p>
+        A good AI translator should preserve technical terms, keep brand names
+        intact, and produce Chinese that feels written for a real person rather
+        than assembled word by word.
+      </p>
+      <blockquote>
+        The goal is not merely to translate every word. The goal is to make the
+        page readable without losing the author's intent.
+      </blockquote>
+
+      <div id="nestedWrap" class="wrap">
+        <div><span>Nested span content inside wrapper divs should still be collected and translated by the clustering engine.</span></div>
+      </div>
+
+      <p id="longParagraph">This deliberately long paragraph exists so the extension can exercise sentence-level splitting for very long text units. When a single paragraph exceeds the per-item character budget, the background worker breaks it into ordered sentence chunks and translates each chunk separately. If one of those chunks fails or is dropped by the model, the remaining chunks must still be assembled and shown instead of blanking the entire paragraph. This behavior matters most on the free rate-limited tier, where a single dropped chunk used to erase a whole section of translated text. Readers expect to see as much of the translation as the model actually returned, not an empty gap where a long passage should be. A robust translator therefore stitches together whatever parts came back, keeps their original order, and only marks the paragraph as failed when absolutely nothing was returned for it. This paragraph is padded with several additional sentences so that its total length comfortably exceeds the twelve hundred character threshold used by the smoke test configuration, guaranteeing that the splitting path is taken and that at least two ordered parts are produced for assembly. Even with one part intentionally missing, the visible translation should remain non-empty and readable.</p>
+      <pre><code>const apiKey = "do-not-translate-code";</code></pre>
+      <p>
+        This final paragraph is loaded with ordinary prose so the extension can
+        test batching, caching, and recovery after the user restores the original
+        page.
+      </p>
+    </article>
+
+    <script>
+      setTimeout(() => {
+        const paragraph = document.createElement("p");
+        paragraph.textContent =
+          "This paragraph was added dynamically after the page loaded, so a realtime translator should notice it and process it later.";
+        document.querySelector("article").append(paragraph);
+      }, 2500);
+    </script>
+  </body>
+</html>

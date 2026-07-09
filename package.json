@@ -1,0 +1,11 @@
+{
+  "name": "yeyi-translator",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "雅译 - 面向 C 端的 AI 网页翻译扩展（原生 JS + MV3）",
+  "scripts": {
+    "check": "node --check src/shared.js && node --check src/utils.js && node --check src/background.js && node --check src/content.js && node --check src/popup.js && node --check src/options.js && node --check src/newtab.js",
+    "check:zh": "node scripts/check-ui-zh.mjs"
+  }
+}

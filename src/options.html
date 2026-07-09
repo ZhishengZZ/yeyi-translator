@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>雅译设置</title>
+    <script>
+      document.documentElement.dataset.theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    </script>
+    <link rel="stylesheet" href="ui.css" />
+  </head>
+  <body class="options-body">
+    <main class="options-shell">
+      <header class="options-header">
+        <div class="brand">
+          <span class="brand-mark">雅</span>
+          <div>
+            <h1>雅译设置</h1>
+            <p>请填写自己的模型接口、模型名称和 API Key；保存后即可开始翻译。</p>
+          </div>
+        </div>
+        <button class="secondary-button compact" id="testProvider" type="button">测试连接</button>
+      </header>
+
+      <section class="settings-grid">
+        <article class="settings-section">
+          <header><span class="seq">01</span><h2>模型服务</h2></header>
+          <label>
+            <span>模型预设</span>
+            <select id="providerPreset"></select>
+            <span class="field-help">选一个模型，会自动填好服务名称、接口地址和模型名。API Key 需要自己填写。</span>
+          </label>
+          <label>
+            <span>服务名称</span>
+            <input id="providerName" autocomplete="off" />
+            <span class="field-help">只是给你看的标签，不影响实际请求。</span>
+          </label>
+          <label>
+            <span>接口地址</span>
+            <input id="baseUrl" autocomplete="off" spellcheck="false" />
+            <span class="field-help">模型服务的网址，后台会自动在后面补上 /chat/completions。</span>
+          </label>
+          <label>
+            <span>模型名称</span>
+            <input id="model" autocomplete="off" spellcheck="false" />
+            <span class="field-help">服务商文档里写的模型 ID，填错了会连不上。</span>
+          </label>
+          <label>
+            <span>接口密钥（API Key）</span>
+            <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="请输入自己的 API Key" />
+          </label>
+          <p class="section-note">API Key 只存在本机，不会显示给页面、也不会导出。第一次连接模型服务时，会弹窗请求该域名的访问权限。</p>
+          <div class="result-card" id="testResult" hidden></div>
+        </article>
+
+        <article class="settings-section">
+          <header><span class="seq">02</span><h2>翻译偏好</h2></header>
+          <label>
+            <span>外观主题</span>
+            <select id="theme">
+              <option value="auto">跟随系统</option>
+              <option value="light">浅色</option>
+              <option value="dark">暗色</option>
+            </select>
+            <span class="field-help">控制雅译所有界面（弹窗、设置页、新标签页）的明暗。跟随系统会随你电脑的设置自动切换。</span>
+          </label>
+          <div class="inline-row">
+            <label>
+              <span>源语言</span>
+              <input id="sourceLanguage" autocomplete="off" />
+            </label>
+            <label>
+              <span>目标语言</span>
+              <input id="targetLanguage" autocomplete="off" />
+            </label>
+          </div>
+          <div class="inline-row">
+            <label>
+              <span>默认显示</span>
+              <select id="mode">
+                <option value="bilingual">双语对照</option>
+                <option value="replace">替换原文</option>
+              </select>
+            </label>
+            <label>
+              <span>双语样式</span>
+              <select id="bilingualStyle">
+                <option value="none">无装饰</option>
+                <option value="leftLine">淡色左竖线</option>
+                <option value="underline">虚线下划线</option>
+                <option value="softBlock">微底色圆角块</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            <span>翻译风格</span>
+            <select id="quality">
+              <option value="balanced">信达雅</option>
+              <option value="precise">精准忠实</option>
+              <option value="fluent">自然中文</option>
+              <option value="technical">技术文档</option>
+              <option value="business">商务正式</option>
+              <option value="literary">文学润色</option>
+            </select>
+          </label>
+          <label class="switch-line">
+            <input id="showFloatingBall" type="checkbox" />
+            <span class="switch-ui" aria-hidden="true"></span>
+            <span>显示悬浮球</span>
+          </label>
+        </article>
+
+        <article class="settings-section">
+          <header><span class="seq">03</span><h2>网站规则</h2></header>
+          <div class="preset-actions">
+            <button class="secondary-button compact" id="fillSitePresets" type="button">填入常用预设</button>
+            <button class="secondary-button compact" id="clearSiteRules" type="button">清空网站规则</button>
+          </div>
+          <label class="switch-line">
+            <input id="autoTranslate" type="checkbox" />
+            <span class="switch-ui" aria-hidden="true"></span>
+            <span>打开支持的页面就自动翻译</span>
+          </label>
+          <p class="section-note">每行一个网址。搜索、新闻、文档类网站适合"总是翻译"；邮箱、登录、银行支付这类隐私页面适合"永不翻译"。</p>
+          <label>
+            <span>总是翻译的网站</span>
+            <textarea id="alwaysTranslateHosts" spellcheck="false" placeholder="docs.example.com&#10;news.example.com"></textarea>
+          </label>
+          <label>
+            <span>永不翻译的网站</span>
+            <textarea id="neverTranslateHosts" spellcheck="false" placeholder="bank.example.com&#10;mail.example.com"></textarea>
+          </label>
+        </article>
+
+        <article class="settings-section">
+          <header><span class="seq">04</span><h2>速度与并发</h2></header>
+          <p class="section-note">下面这些控制翻译有多快、多稳。不同服务商限速不同，不确定就保持默认。</p>
+
+          <div class="inline-row">
+            <label>
+              <span>一次翻译几段</span>
+              <input id="batchSize" type="number" min="3" max="40" />
+              <span class="field-help">每次请求一起送出去翻译的段落数。调大更省额度，但中间出错影响范围也大；调小更稳但更慢。</span>
+            </label>
+            <label>
+              <span>同时翻译几路</span>
+              <input id="concurrency" type="number" min="1" max="8" />
+              <span class="field-help">同时发出多少个请求。若服务商限速严格，建议设 1；额度更高时可以调高来加快。</span>
+            </label>
+          </div>
+
+          <div class="inline-row">
+            <label>
+              <span>单段最长字数</span>
+              <input id="maxCharsPerItem" type="number" min="120" max="3000" />
+              <span class="field-help">超长的段落会按这个长度切开再翻。太长可能超出模型限制，太短又容易把句子拆碎。</span>
+            </label>
+            <label>
+              <span>等多久算超时</span>
+              <input id="requestTimeoutMs" type="number" min="10000" max="120000" />
+              <span class="field-help">一个请求超过这个时间没回应，就当作超时并自动重试。网慢的时候可以调大一点。</span>
+            </label>
+          </div>
+
+          <div class="inline-row">
+            <label>
+              <span>翻译灵活度（温度）</span>
+              <input id="temperature" type="number" min="0" max="1" step="0.05" />
+              <span class="field-help">0 最严谨、逐字贴原文，1 更灵活自由。做翻译一般填 0.2，既准又自然。</span>
+            </label>
+            <label>
+              <span>一次最多回多长</span>
+              <input id="maxTokens" type="number" min="512" max="16000" />
+              <span class="field-help">模型一次能回复的上限。遇到长文章"翻到一半就没了"，可以适当调高。</span>
+            </label>
+          </div>
+
+          <div class="inline-row">
+            <label>
+              <span>失败重试几次</span>
+              <input id="maxRetries" type="number" min="0" max="4" />
+              <span class="field-help">某段翻译失败后自动重试的次数。经常被限流的话可以调低，免得白白消耗额度。</span>
+            </label>
+            <label>
+              <span>要不要先想再翻</span>
+              <select id="thinkingMode">
+                <option value="disabled">关闭，优先速度</option>
+                <option value="enabled">开启，先推理再翻译</option>
+              </select>
+              <span class="field-help">开启后模型会先想一遍再翻译，更准但明显更慢；不确定是否支持时建议关闭。</span>
+            </label>
+          </div>
+
+          <label class="switch-line">
+            <input id="enableCache" type="checkbox" />
+            <span class="switch-ui" aria-hidden="true"></span>
+            <span>记住翻过的内容</span>
+          </label>
+          <p class="section-note">打开后，相同的段落直接用上次的翻译结果，不再重复花钱。改了术语表或翻译风格，旧结果会自动作废。</p>
+          <button class="secondary-button compact" id="clearCache" type="button">清空缓存</button>
+        </article>
+
+        <article class="settings-section">
+          <header><span class="seq">05</span><h2>实验室功能</h2></header>
+          <label class="switch-line">
+            <input id="searchBoxTranslate" type="checkbox" />
+            <span class="switch-ui" aria-hidden="true"></span>
+            <span>搜索框中译英</span>
+          </label>
+          <p class="section-note">打开后，在网页搜索框里输入中文，会自动生成对应的英文搜索词建议，不影响网页正文翻译。</p>
+          <label>
+            <span>呈现方式</span>
+            <select id="searchBoxTranslateMode">
+              <option value="suggest">显示建议，自己点填</option>
+              <option value="replace">直接替换成英文</option>
+            </select>
+          </label>
+          <label class="switch-line">
+            <input id="enableNewTabOverride" type="checkbox" />
+            <span class="switch-ui" aria-hidden="true"></span>
+            <span>新标签页显示英文搜索建议</span>
+          </label>
+          <p class="section-note">Chrome 的新标签页接管由扩展清单决定，不能在运行时切回原生页。这个开关只控制雅译新标签页里的中译英搜索建议；若要恢复浏览器原生新标签页，请在扩展管理页停用本扩展。</p>
+        </article>
+
+        <article class="settings-section glossary-section">
+          <header><span class="seq">06</span><h2>术语表</h2></header>
+          <div class="preset-actions">
+            <button class="secondary-button compact" id="fillGlossaryPreset" type="button">填入 AI 术语预设</button>
+            <button class="secondary-button compact" id="clearGlossary" type="button">清空术语表</button>
+          </div>
+          <textarea
+            id="glossary"
+            spellcheck="false"
+            placeholder="prompt = 提示词&#10;agent = 智能体&#10;alignment = 对齐"
+          ></textarea>
+          <p class="section-note">这里列出的词，翻译时会按你指定的译法来翻。改了术语表，旧翻译会自动作废，不会用到错的旧结果。</p>
+        </article>
+
+        <article class="settings-section glossary-section">
+          <header><span class="seq">07</span><h2>数据与统计</h2></header>
+          <p class="section-note" id="statsSummary">正在读取用量统计...</p>
+          <div class="stats-grid" id="statsGrid" aria-live="polite"></div>
+          <div class="button-row">
+            <button class="secondary-button" id="clearStats" type="button">清空统计</button>
+            <button class="secondary-button" id="exportConfig" type="button">导出配置</button>
+            <button class="secondary-button" id="importConfig" type="button">导入配置</button>
+            <input id="importFile" type="file" accept="application/json" hidden />
+          </div>
+        </article>
+      </section>
+    </main>
+    <div class="toast" id="saveToast" role="status" aria-live="polite">已保存</div>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>
