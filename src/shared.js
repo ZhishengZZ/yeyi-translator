@@ -1,3 +1,5 @@
+// 雅译 Yeyi · 张枳生制作
+
 // 默认术语表:挑「模型经常译错/译得不统一」的高频词,覆盖 AI、开发、互联网、
 // 商业新闻四类常读内容;刻意避开一词多义会误伤的词(如 issue/release)。
 export const DEFAULT_GLOSSARY = [
@@ -209,6 +211,7 @@ export const DEFAULT_SETTINGS = {
   bilingualStyle: "none",
   searchBoxTranslate: false,
   searchBoxTranslateMode: "suggest",
+  selectionTranslate: true,
   enableNewTabOverride: true,
   theme: "auto",
   alwaysTranslateHosts: [],

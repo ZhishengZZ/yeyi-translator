@@ -208,6 +208,12 @@
         <article class="settings-section">
           <header><span class="seq">05</span><h2>实验室功能</h2></header>
           <label class="switch-line">
+            <input id="selectionTranslate" type="checkbox" />
+            <span class="switch-ui" aria-hidden="true"></span>
+            <span>划词翻译</span>
+          </label>
+          <p class="section-note">选中网页文字后出现「译」气泡，点一下就地显示译文，可一键复制。走你配置的同一模型，遵循当前翻译风格与术语表。</p>
+          <label class="switch-line">
             <input id="searchBoxTranslate" type="checkbox" />
             <span class="switch-ui" aria-hidden="true"></span>
             <span>搜索框中译英</span>
@@ -254,6 +260,7 @@
           </div>
         </article>
       </section>
+      <p style="margin: 20px 0 10px; text-align: center; font-size: 12px; color: #9aa0a6;">雅译 · 张枳生制作</p>
     </main>
     <div class="toast" id="saveToast" role="status" aria-live="polite">已保存</div>
     <script type="module" src="options.js"></script>

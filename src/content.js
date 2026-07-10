@@ -6,6 +6,7 @@
   const IS_TOP = (window.top === window);
 
   // ─────────────────────────────────────────────────────────────────────────
+  // 雅译 Yeyi · 张枳生制作
   // 引擎移植自 read-frog（walk-and-label 段落检测 + block/inline 分类 + wrapper
   // 插入）。相较旧版「文本节点按块拥有者聚类」，改为先递归遍历整棵子树打标签、
   // 识别「段落」触发单元，再按 block/inline 决定译文是另起一行还是行内接排。
@@ -99,6 +100,19 @@
     searchTimer: 0,
     searchRequestId: 0,
     isComposing: false,
+    // 划词翻译
+    selectionEnabled: true,
+    selectionAssistReady: false,
+    selectionRoot: null,
+    selectionBasePos: null,
+    selectionDirection: "BR",
+    selectionStartPoint: null,
+    selectionPreserve: false,
+    selectionPointerDownInside: false,
+    selectionText: "",
+    selectionContext: "",
+    selectionRequestId: 0,
+    selectionRafId: 0,
     booting: null
   };
 
@@ -120,6 +134,7 @@
       state.bilingualStyle = settings.bilingualStyle || state.bilingualStyle;
       state.hiddenForHost = matchesHost(location.hostname, settings.neverTranslateHosts);
       setupSearchAssist(settings);
+      setupSelectionAssist(settings);
     }
     chrome.storage.onChanged?.addListener((changes, area) => {
       if (area !== "local" || !changes["yeyi.settings"]) return;
@@ -132,6 +147,10 @@
       state.settings = { ...state.settings, ...next };
       // 设置页刚开启搜索助翻:立即挂监听,不再要求刷新页面才生效。
       if (state.searchAssistEnabled && !state.searchAssistReady) setupSearchAssist(state.settings);
+      // 划词翻译同理:开关即时生效,关掉时顺手收起气泡/面板。
+      state.selectionEnabled = next.selectionTranslate !== false;
+      if (state.selectionEnabled && !state.selectionAssistReady) setupSelectionAssist(state.settings);
+      if (!state.selectionEnabled) hideSelectionUI();
       if (prevBall !== next.showFloatingBall) renderFloatingBall();
       // 双语样式即改即生效:已翻译的译块(含 shadow 内)当场换装,无需重新翻译。
       if (next.bilingualStyle && next.bilingualStyle !== prevStyle) applyBilingualStyleLive(next.bilingualStyle);
@@ -332,18 +351,36 @@
   }
 
   function queueAllUnitsForContextRefine() {
-    let queued = 0;
+    // 只精翻「已有译文」的单元:精翻是对旧译文的二次校准,未译/失败/跳过的单元
+    // 走普通翻译与重试通道,不该吃精翻的大上下文提示词(省 token、省时间)。
+    const candidates = [];
     for (const record of state.units) {
       if (!record.wrapper?.isConnected) continue;
-      record.countedBeforeRefine = record.status === "done";
-      record.status = record.status === "error" ? "failed" : "queued";
+      if (record.status !== "done") continue;
+      if (!currentTranslationText(record)) continue;
+      candidates.push(record);
+    }
+    // 视口优先:先精翻用户正看着的段落,其余保持文档顺序(sort 稳定)。
+    const viewportHeight = window.innerHeight || 0;
+    const inViewport = (record) => {
+      const el = isHTMLElement(record.targetNode) ? record.targetNode : record.targetNode?.parentElement;
+      const rect = el?.getBoundingClientRect?.();
+      return !!rect && rect.bottom > 0 && rect.top < viewportHeight;
+    };
+    candidates.sort((a, b) => Number(inViewport(b)) - Number(inViewport(a)));
+
+    let queued = 0;
+    for (const record of candidates) {
+      record.countedBeforeRefine = true;
+      record.status = "queued";
       record.attempts = 0;
       record.error = "";
       state.queue.add(record);
       queued += 1;
     }
-    if (!queued) {
-      state.error = "当前页面没有可精翻的段落。";
+    // 冷启动路径(先翻译后精翻)时队列里已有普通单元,不算"无可精翻"。
+    if (!queued && !state.queue.size) {
+      state.error = "当前页面还没有已完成的译文可精翻，请先翻译页面。";
       state.contextRefining = false;
     }
   }
@@ -1431,6 +1468,274 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
   }
 
   // ══════════════════════════ 搜索框助翻(沿用雅译) ══════════════════════════
+
+  // ═══════════════ 划词翻译(交互移植自 read-frog selection.content) ═══════════════
+  // 行为对齐 read-frog selection-toolbar:mousedown 记录起点并收起旧 UI;mouseup 经
+  // requestAnimationFrame 读选区(保证 selectionchange 先行);划选方向决定气泡出现在
+  // 光标哪一侧(20px 净空)并钳制在视口内;点击按钮/链接/输入框等交互元素不弹;
+  // 选区清空即收起;点在气泡/面板内不打断选区。
+
+  const SELECTION_INTERACTIVE_SELECTOR = 'button, [role="button"], a[href], input, textarea, select, summary';
+  const SELECTION_MARGIN = 10;
+  const SELECTION_CLEARANCE = 20;
+
+  function setupSelectionAssist(settings) {
+    state.selectionEnabled = settings?.selectionTranslate !== false;
+    if (!state.selectionEnabled || state.selectionAssistReady) return;
+    state.selectionAssistReady = true;
+    document.addEventListener("mousedown", handleSelectionMouseDown);
+    document.addEventListener("mouseup", handleSelectionMouseUp);
+    document.addEventListener("selectionchange", handleSelectionChangeEvt);
+    window.addEventListener("scroll", handleSelectionScroll, { passive: true });
+    document.addEventListener("keydown", handleSelectionKeydown, true);
+  }
+
+  function selectionRootEl() {
+    if (state.selectionRoot?.isConnected) return state.selectionRoot;
+    const root = document.createElement("div");
+    root.className = `${NOTRANSLATE_CLASS} yeyi-selection-root`;
+    root.dataset.yeyi = "1";
+    (document.body || document.documentElement).appendChild(root);
+    state.selectionRoot = root;
+    return root;
+  }
+
+  function hideSelectionUI() {
+    state.selectionText = "";
+    state.selectionContext = "";
+    state.selectionBasePos = null;
+    state.selectionRequestId += 1; // 令 in-flight 请求的结果作废
+    if (state.selectionRoot) state.selectionRoot.textContent = "";
+  }
+
+  // 判断节点是否在划词 UI 内(跨 shadow 用 host 链上行)。
+  function selectionInsideOwnUI(node) {
+    let current = node;
+    while (current) {
+      if (current === state.selectionRoot) return true;
+      current = current.parentNode || (current.nodeType === 11 ? current.host : null);
+    }
+    return false;
+  }
+
+  function handleSelectionMouseDown(event) {
+    if (!state.selectionEnabled) return;
+    if (event.button === 2) return;
+    const path = event.composedPath?.() || [];
+    state.selectionPointerDownInside = state.selectionRoot ? path.includes(state.selectionRoot) : false;
+    if (state.selectionPointerDownInside) {
+      state.selectionPreserve = true;
+      return;
+    }
+    state.selectionPreserve = false;
+    state.selectionStartPoint = { x: event.clientX, y: event.clientY };
+    hideSelectionUI();
+  }
+
+  function handleSelectionMouseUp(event) {
+    if (!state.selectionEnabled) return;
+    if (state.selectionPointerDownInside) {
+      state.selectionPointerDownInside = false;
+      state.selectionPreserve = true;
+      return;
+    }
+    const path = event.composedPath?.() || [];
+    const interactive =
+      path.find((node) => isHTMLElement(node) && node.matches?.(SELECTION_INTERACTIVE_SELECTOR)) ||
+      (isHTMLElement(event.target) ? event.target.closest?.(SELECTION_INTERACTIVE_SELECTOR) : null);
+    // rAF 延后读选区,保证点击清空选区时 selectionchange 先把 UI 收掉(与 read-frog 一致)。
+    requestAnimationFrame(() => {
+      const active = document.activeElement;
+      const isEditing = !!active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable);
+      if (isEditing && event.target !== active) return;
+      const selection = window.getSelection?.();
+      if (!selection) return;
+      if (selectionInsideOwnUI(selection.anchorNode) || selectionInsideOwnUI(selection.focusNode)) {
+        state.selectionPreserve = true;
+        return;
+      }
+      const text = String(selection.toString() || "").replace(/​/g, "").trim();
+      if (!text || text.length < 2 || text.length > 2000) return;
+      if (!isEditing && interactive && !selection.containsNode?.(interactive, true)) return;
+      const anchorEl = isHTMLElement(selection.anchorNode) ? selection.anchorNode : selection.anchorNode?.parentElement;
+      if (anchorEl?.closest?.("[data-yeyi='1']")) return; // 选在雅译自身 UI 里不弹
+
+      state.selectionText = text;
+      state.selectionContext = selectionContextParagraph(selection);
+      const start = state.selectionStartPoint;
+      state.selectionDirection = selectionDirection(
+        start?.x ?? event.clientX, start?.y ?? event.clientY, event.clientX, event.clientY
+      );
+      state.selectionBasePos = { x: event.clientX + window.scrollX, y: event.clientY + window.scrollY };
+      renderSelectionBubble();
+    });
+  }
+
+  function handleSelectionChangeEvt() {
+    if (!state.selectionEnabled) return;
+    const selection = window.getSelection?.();
+    if (selection && (selectionInsideOwnUI(selection.anchorNode) || selectionInsideOwnUI(selection.focusNode))) {
+      state.selectionPreserve = true;
+      return;
+    }
+    if (!selection || selection.toString().trim() === "") {
+      if (state.selectionPreserve) return;
+      hideSelectionUI();
+    }
+  }
+
+  function handleSelectionScroll() {
+    if (!state.selectionBasePos || !state.selectionRoot?.firstElementChild) return;
+    cancelAnimationFrame(state.selectionRafId);
+    state.selectionRafId = requestAnimationFrame(positionSelectionUI);
+  }
+
+  function handleSelectionKeydown(event) {
+    if (event.key === "Escape") hideSelectionUI();
+  }
+
+  // 划选方向(移植 read-frog getSelectionDirection,含 8px 向下容差)。
+  function selectionDirection(startX, startY, endX, endY) {
+    const rightward = startX <= endX;
+    const downward = startY - 8 <= endY;
+    if (rightward && downward) return "BR";
+    if (rightward) return "TR";
+    return downward ? "BL" : "TL";
+  }
+
+  // 位置 = 光标文档坐标 + 方向偏移(20px 净空),再钳制到视口内(10px 边距)。
+  function positionSelectionUI() {
+    const root = state.selectionRoot;
+    const el = root?.firstElementChild;
+    const base = state.selectionBasePos;
+    if (!root || !el || !base) return;
+    const width = el.offsetWidth || 0;
+    const height = el.offsetHeight || 0;
+    let x = base.x;
+    let y = base.y;
+    if (state.selectionDirection === "BR") y += SELECTION_CLEARANCE;
+    else if (state.selectionDirection === "BL") { x -= width; y += SELECTION_CLEARANCE; }
+    else if (state.selectionDirection === "TR") y -= height + SELECTION_CLEARANCE;
+    else { x -= width; y -= height + SELECTION_CLEARANCE; }
+    const minX = window.scrollX + SELECTION_MARGIN;
+    const maxX = window.scrollX + document.documentElement.clientWidth - width - SELECTION_MARGIN;
+    const minY = window.scrollY + SELECTION_MARGIN;
+    const maxY = window.scrollY + window.innerHeight - height - SELECTION_MARGIN;
+    el.style.left = `${Math.max(minX, Math.min(maxX, x))}px`;
+    el.style.top = `${Math.max(minY, Math.min(maxY, y))}px`;
+  }
+
+  // 语境段落:选区所在的段落级祖先文本(思路取自 read-frog selection utils 的
+  // findParagraphOwner,原生 JS 精简版),给模型当参考、不参与翻译输出。
+  function selectionContextParagraph(selection) {
+    const PARAGRAPH_LIKE = new Set([
+      "P", "LI", "TD", "TH", "DT", "DD", "BLOCKQUOTE", "PRE",
+      "H1", "H2", "H3", "H4", "H5", "H6", "FIGCAPTION"
+    ]);
+    const node = selection.anchorNode;
+    let current = isHTMLElement(node) ? node : node?.parentElement;
+    let fallback = null;
+    let hops = 0;
+    while (current && hops < 12) {
+      if (PARAGRAPH_LIKE.has(current.tagName)) break;
+      if (!fallback) {
+        try {
+          const display = window.getComputedStyle(current).display;
+          if (display === "block" || display === "list-item") fallback = current;
+        } catch {
+          // detached 节点等异常忽略
+        }
+      }
+      current = current.parentElement;
+      hops += 1;
+    }
+    const owner = current && PARAGRAPH_LIKE.has(current.tagName) ? current : fallback;
+    if (!owner) return "";
+    return normalizeText(elementSourceText(owner)).slice(0, 1500);
+  }
+
+  function renderSelectionBubble() {
+    const root = selectionRootEl();
+    root.textContent = "";
+    const bubble = document.createElement("button");
+    bubble.type = "button";
+    bubble.className = "yeyi-selection-bubble";
+    bubble.textContent = "译";
+    bubble.title = "雅译:翻译选中文字";
+    bubble.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      runSelectionTranslate();
+    });
+    root.appendChild(bubble);
+    updatePageTheme();
+    positionSelectionUI();
+  }
+
+  async function runSelectionTranslate() {
+    const text = state.selectionText;
+    if (!text) return;
+    const requestId = ++state.selectionRequestId;
+    renderSelectionPanel({ status: "loading", text });
+    try {
+      const result = await sendRuntimeMessage({
+        type: "YEYI_TRANSLATE_SELECTION",
+        text,
+        context: state.selectionContext
+      });
+      if (requestId !== state.selectionRequestId) return; // 已被新的操作作废
+      renderSelectionPanel({ status: "done", text, translation: result?.translation || "" });
+    } catch (error) {
+      if (requestId !== state.selectionRequestId) return;
+      renderSelectionPanel({ status: "error", text, error: error?.message || String(error) });
+    }
+  }
+
+  function renderSelectionPanel({ status, text, translation = "", error = "" }) {
+    const root = selectionRootEl();
+    root.textContent = "";
+    const panel = document.createElement("div");
+    panel.className = "yeyi-selection-panel";
+    panel.dataset.status = status;
+
+    const source = document.createElement("div");
+    source.className = "yeyi-selection-source";
+    source.textContent = text.length > 120 ? `${text.slice(0, 120)}…` : text;
+    panel.appendChild(source);
+
+    const body = document.createElement("div");
+    body.className = "yeyi-selection-body";
+    if (status === "loading") body.textContent = "翻译中…";
+    else if (status === "error") body.textContent = error || "翻译失败";
+    else body.textContent = translation;
+    panel.appendChild(body);
+
+    const actions = document.createElement("div");
+    actions.className = "yeyi-selection-actions";
+    if (status === "done" && translation) {
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.textContent = "复制";
+      copy.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(translation);
+          copy.textContent = "已复制";
+        } catch {
+          copy.textContent = "复制失败";
+        }
+      });
+      actions.appendChild(copy);
+    }
+    const close = document.createElement("button");
+    close.type = "button";
+    close.textContent = "关闭";
+    close.addEventListener("click", () => hideSelectionUI());
+    actions.appendChild(close);
+    panel.appendChild(actions);
+
+    root.appendChild(panel);
+    positionSelectionUI();
+  }
 
   function setupSearchAssist(settings) {
     if (!IS_TOP) return; // 搜索助翻只在顶层帧

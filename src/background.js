@@ -123,6 +123,8 @@ async function handleMessage(message, sender) {
       return contextRefineBatch(message.items || [], message.settingsOverride || {}, sender);
     case "YEYI_TRANSLATE_SEARCH_QUERY":
       return translateSearchQuery(message.text || "");
+    case "YEYI_TRANSLATE_SELECTION":
+      return translateSelection(message.text || "", message.context || "");
     case "YEYI_TEST_PROVIDER":
       return testProvider(message.settingsOverride || {});
     case "YEYI_CLEAR_CACHE":
@@ -205,6 +207,7 @@ function sanitizeSettings(settings) {
     searchBoxTranslateMode: ["suggest", "replace"].includes(merged.searchBoxTranslateMode)
       ? merged.searchBoxTranslateMode
       : DEFAULT_SETTINGS.searchBoxTranslateMode,
+    selectionTranslate: merged.selectionTranslate !== false,
     enableNewTabOverride: merged.enableNewTabOverride !== false,
     theme: ["auto", "light", "dark"].includes(merged.theme) ? merged.theme : "auto",
     alwaysTranslateHosts: normalizeHostList(merged.alwaysTranslateHosts),
@@ -575,6 +578,19 @@ async function translateSearchQuery(text) {
   };
 }
 
+// 划词翻译:单次调用,沿用当前翻译风格/术语表/目标语言,附所在段落做语境。
+async function translateSelection(text, context) {
+  const settings = await getSettings();
+  ensureConfigured(settings);
+  await ensureHostPermission(settings);
+  const selected = String(text || "").replace(/\s+/g, " ").trim();
+  if (!selected) return { translation: "" };
+  if (selected.length > 2000) throw new Error("选中文字过长（超过 2000 字），请缩短后再译。");
+  return {
+    translation: await callSelectionApi(selected, String(context || "").slice(0, 1500), settings)
+  };
+}
+
 function ensureConfigured(settings) {
   if (!settings.baseUrl?.trim()) {
     throw new Error("请先配置接口地址。");
@@ -726,6 +742,100 @@ async function callSearchQueryApi(text, settings) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function callSelectionApi(text, context, settings) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), settings.requestTimeoutMs);
+  const endpoint = `${normalizeBaseUrl(settings.baseUrl)}/chat/completions`;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${resolveApiKey(settings)}`
+      },
+      body: JSON.stringify(buildSelectionRequestBody(text, context, settings))
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      throw new ProviderError(
+        `模型服务返回 ${response.status}：${trimErrorText(responseText)}`,
+        response.status
+      );
+    }
+
+    const data = JSON.parse(responseText);
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content) throw new Error("模型服务没有返回翻译内容。");
+    return parseSelectionPayload(content);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function buildSelectionRequestBody(text, context, settings) {
+  const caps = providerCapabilities(settings);
+  const styleGuide = STYLE_GUIDES[settings.quality] || STYLE_GUIDES.balanced;
+  const body = {
+    model: settings.model.trim(),
+    temperature: Math.min(0.3, settings.temperature),
+    max_tokens: Math.min(2000, settings.maxTokens),
+    stream: false,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a professional translator for selected webpage text. Translate idiomatically, honor the style instructions, keep proper nouns, numbers, and code-like tokens intact. Output strict JSON only."
+      },
+      {
+        role: "user",
+        content: [
+          `Target language: ${settings.targetLanguage}`,
+          `Style instructions: ${styleGuide}`,
+          `Glossary:\n${glossaryToText(settings.glossary)}`,
+          context ? `Surrounding paragraph (context only, do NOT translate it):\n${context}` : "",
+          "",
+          "Translate the selected text below. Return only the translation of the selected text.",
+          '返回格式：{"text":"译文"}',
+          "",
+          `Selected text: ${text}`
+        ].filter(Boolean).join("\n")
+      }
+    ]
+  };
+  if (caps.supportsResponseFormat) {
+    body.response_format = { type: "json_object" };
+  }
+  if (caps.supportsThinking) {
+    body[caps.thinkingField] = { type: settings.thinkingMode === "enabled" ? "enabled" : "disabled" };
+  }
+  return body;
+}
+
+// 宽容解析:优先 JSON {"text":...};模型没守格式时剥掉代码围栏直接用原文。
+function parseSelectionPayload(content) {
+  const raw = String(content || "").trim();
+  try {
+    const parsed = JSON.parse(raw);
+    const value = typeof parsed === "string" ? parsed : parsed?.text ?? parsed?.translation;
+    if (typeof value === "string" && value.trim()) return value.trim();
+  } catch {
+    // 落到下面的裸文本处理
+  }
+  const stripped = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  try {
+    const parsed = JSON.parse(stripped);
+    const value = typeof parsed === "string" ? parsed : parsed?.text ?? parsed?.translation;
+    if (typeof value === "string" && value.trim()) return value.trim();
+  } catch {
+    // 仍不是 JSON,按纯文本返回
+  }
+  if (!stripped) throw new Error("模型服务返回了空译文。");
+  return stripped;
 }
 
 // 按 provider 能力构建请求体：response_format 与 thinking 仅对支持的 provider 注入，
