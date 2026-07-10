@@ -150,7 +150,7 @@
             <label>
               <span>同时翻译几路</span>
               <input id="concurrency" type="number" min="1" max="8" />
-              <span class="field-help">同时发出多少个请求。若服务商限速严格，建议设 1；额度更高时可以调高来加快。</span>
+              <span class="field-help">同时发出多少个请求。默认 4，长文页面明显更快；若服务商限速严格再降到 1。</span>
             </label>
           </div>
 
@@ -231,7 +231,7 @@
         <article class="settings-section glossary-section">
           <header><span class="seq">06</span><h2>术语表</h2></header>
           <div class="preset-actions">
-            <button class="secondary-button compact" id="fillGlossaryPreset" type="button">填入 AI 术语预设</button>
+            <button class="secondary-button compact" id="fillGlossaryPreset" type="button">填入术语表预设</button>
             <button class="secondary-button compact" id="clearGlossary" type="button">清空术语表</button>
           </div>
           <textarea

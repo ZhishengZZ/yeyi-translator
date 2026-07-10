@@ -1,24 +1,50 @@
+// 默认术语表:挑「模型经常译错/译得不统一」的高频词,覆盖 AI、开发、互联网、
+// 商业新闻四类常读内容;刻意避开一词多义会误伤的词(如 issue/release)。
 export const DEFAULT_GLOSSARY = [
+  // AI / 模型
   "LLM = 大语言模型",
-  "large language model = 大语言模型",
   "AI agent = AI 智能体",
   "agent = 智能体",
   "prompt = 提示词",
-  "prompt engineering = 提示词工程",
-  "alignment = 对齐",
-  "inference = 推理",
-  "reasoning = 推理",
-  "context window = 上下文窗口",
   "token = Token",
-  "embedding = 嵌入",
+  "context window = 上下文窗口",
+  "inference = 推理",
   "fine-tuning = 微调",
+  "embedding = 向量嵌入",
   "RAG = 检索增强生成",
   "hallucination = 幻觉",
+  "multimodal = 多模态",
   "benchmark = 基准测试",
-  "throughput = 吞吐量",
-  "latency = 延迟",
+  "open-source = 开源",
+  // 开发 / 技术文档
+  "repository = 仓库",
+  "pull request = PR",
+  "commit = 提交",
+  "branch = 分支",
+  "cache = 缓存",
+  "endpoint = 端点",
+  "API key = API 密钥",
   "rate limit = 速率限制",
-  "open-source = 开源"
+  "latency = 延迟",
+  "throughput = 吞吐量",
+  "deprecated = 已弃用",
+  "breaking change = 破坏性变更",
+  "changelog = 更新日志",
+  "roadmap = 路线图",
+  // 互联网 / 日常阅读
+  "cookie = Cookie",
+  "paywall = 付费墙",
+  "podcast = 播客",
+  "newsletter = 邮件简报",
+  "subscription = 订阅",
+  "terms of service = 服务条款",
+  "privacy policy = 隐私政策",
+  // 商业 / 新闻
+  "stakeholder = 利益相关方",
+  "revenue = 营收",
+  "valuation = 估值",
+  "startup = 初创公司",
+  "venture capital = 风险投资"
 ].join("\n");
 
 export const SITE_HOST_PRESETS = {
@@ -49,7 +75,7 @@ export const PROVIDER_PRESETS = [
     providerName: "DeepSeek",
     baseUrl: "https://api.deepseek.com",
     model: "deepseek-v4-flash",
-    maxTokens: 6000,
+    maxTokens: 8000,
     temperature: 0.2,
     requestTimeoutMs: 30000,
     thinkingMode: "disabled"
@@ -60,7 +86,7 @@ export const PROVIDER_PRESETS = [
     providerName: "DeepSeek",
     baseUrl: "https://api.deepseek.com",
     model: "deepseek-v4-pro",
-    maxTokens: 6000,
+    maxTokens: 8000,
     temperature: 0.2,
     requestTimeoutMs: 45000,
     thinkingMode: "disabled"
@@ -71,7 +97,7 @@ export const PROVIDER_PRESETS = [
     providerName: "Qwen / 阿里云百炼",
     baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
     model: "qwen3.7-max",
-    maxTokens: 6000,
+    maxTokens: 8000,
     temperature: 0.2,
     requestTimeoutMs: 45000,
     thinkingMode: "disabled"
@@ -82,7 +108,7 @@ export const PROVIDER_PRESETS = [
     providerName: "Qwen / 阿里云百炼",
     baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
     model: "qwen3.7-plus",
-    maxTokens: 6000,
+    maxTokens: 8000,
     temperature: 0.2,
     requestTimeoutMs: 40000,
     thinkingMode: "disabled"
@@ -93,7 +119,7 @@ export const PROVIDER_PRESETS = [
     providerName: "Qwen / 阿里云百炼",
     baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
     model: "qwen3.6-flash",
-    maxTokens: 6000,
+    maxTokens: 8000,
     temperature: 0.2,
     requestTimeoutMs: 30000,
     thinkingMode: "disabled"
@@ -104,7 +130,7 @@ export const PROVIDER_PRESETS = [
     providerName: "Z.AI / GLM",
     baseUrl: "https://api.z.ai/api/paas/v4/",
     model: "glm-5.2",
-    maxTokens: 6000,
+    maxTokens: 8000,
     temperature: 0.2,
     requestTimeoutMs: 45000,
     thinkingMode: "disabled"
@@ -115,7 +141,7 @@ export const PROVIDER_PRESETS = [
     providerName: "小米 MiMo",
     baseUrl: "https://api.xiaomimimo.com/v1",
     model: "mimo-v2.5-pro",
-    maxTokens: 6000,
+    maxTokens: 8000,
     temperature: 0.2,
     requestTimeoutMs: 45000,
     thinkingMode: "disabled"
@@ -126,7 +152,7 @@ export const PROVIDER_PRESETS = [
     providerName: "腾讯混元",
     baseUrl: "https://api.hunyuan.cloud.tencent.com/v1",
     model: "hunyuan-turbos-latest",
-    maxTokens: 6000,
+    maxTokens: 8000,
     temperature: 0.2,
     requestTimeoutMs: 45000,
     thinkingMode: "disabled"
@@ -173,9 +199,12 @@ export const DEFAULT_SETTINGS = {
   maxTokens: 8000,
   thinkingMode: "disabled",
   glossary: DEFAULT_GLOSSARY,
-  requestTimeoutMs: 30000,
+  // maxTokens 提到 8000 后,大批次响应 30s 偶发掐头;40s 与预设档位更匹配。
+  requestTimeoutMs: 40000,
   maxRetries: 1,
-  concurrency: 1,
+  // 默认 4 路并发:1 路在长文页面慢得难以接受;主流服务商个人档都扛得住 4,
+  // 限速严的用户可在设置页降回 1。
+  concurrency: 4,
   showFloatingBall: true,
   bilingualStyle: "none",
   searchBoxTranslate: false,

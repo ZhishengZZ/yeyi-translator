@@ -126,10 +126,15 @@
       const next = changes["yeyi.settings"].newValue;
       if (!next) return;
       const prevBall = state.settings?.showFloatingBall;
+      const prevStyle = state.settings?.bilingualStyle;
       state.searchAssistEnabled = Boolean(next.searchBoxTranslate);
       state.searchAssistMode = next.searchBoxTranslateMode === "replace" ? "replace" : "suggest";
       state.settings = { ...state.settings, ...next };
+      // 设置页刚开启搜索助翻:立即挂监听,不再要求刷新页面才生效。
+      if (state.searchAssistEnabled && !state.searchAssistReady) setupSearchAssist(state.settings);
       if (prevBall !== next.showFloatingBall) renderFloatingBall();
+      // 双语样式即改即生效:已翻译的译块(含 shadow 内)当场换装,无需重新翻译。
+      if (next.bilingualStyle && next.bilingualStyle !== prevStyle) applyBilingualStyleLive(next.bilingualStyle);
     });
     renderFloatingBall();
 
@@ -140,6 +145,20 @@
     ) {
       requestIdle(() => startTranslation({ auto: true }));
     }
+  }
+
+  // 设置页改了双语样式,给页面上已有译块(含 shadow root 内)当场换装。
+  function applyBilingualStyleLive(style) {
+    state.bilingualStyle = style;
+    if (!state.active) return;
+    document.documentElement.dataset.yeyiBilingualStyle = style;
+    const applyIn = (root) => {
+      root.querySelectorAll?.(".yeyi-translation").forEach((node) => {
+        node.dataset.style = style;
+      });
+    };
+    applyIn(document);
+    for (const shadowRoot of state.shadowRoots) applyIn(shadowRoot);
   }
 
   async function handleMessage(message) {
