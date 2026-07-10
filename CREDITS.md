@@ -50,6 +50,12 @@ This is a **modified work**. Changes on top of the Read Frog engine, in **July 2
 - A Chrome Settings–style UI across popup / options / new tab, plus a native-style new tab page.
 - Bring-your-own-key architecture: the API key stays in `chrome.storage.local` and never reaches the page.
 
+Additional changes in **0.5.0 (July 2026)** / 0.5.0 追加改动:
+
+- Translation now runs inside iframes (`all_frames` + `match_about_blank`); visible UI stays top-frame only. / 翻译进入 iframe,可视 UI 仅保留在顶层帧。
+- Open Shadow DOM trees are walked, translated, restored, and observed for dynamic content — the shadow-root descent is ported from Read Frog's `utils/host/dom/traversal.ts` and `utils/host/translate/core/translation-walker.ts`. / open Shadow DOM 的下钻遍历移植自 Read Frog 上述两个文件。
+- Translated-block styles (incl. keyframes) are injected into each shadow root, since page-level CSS cannot cross the shadow boundary (original work). / shadow root 内注入译块样式副本(原创实现)。
+
 **Because of the above, the entire Yeyi project is licensed under GPL-3.0.** See `LICENSE`.
 
 **正因如此，雅译整个项目以 GPL-3.0 开源。** 详见 `LICENSE`。

@@ -6,10 +6,9 @@ import { dirname, extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
-const preferredExtensionRoot = "D:/翻译插件备份开发/yeyi-translator";
-const extensionRoot = existsSync(`${preferredExtensionRoot}/manifest.json`)
-  ? preferredExtensionRoot
-  : resolve(scriptDir, "..");
+// 永远测本脚本所在的副本:多版本文件夹并存后,硬编码旧路径会测错版本。
+// 需要测其他副本时用环境变量 YEYI_EXT_ROOT 显式指定。
+const extensionRoot = process.env.YEYI_EXT_ROOT || resolve(scriptDir, "..");
 const runId = `${process.pid}-${Date.now()}`;
 const profileDir = `C:/Users/10446/Documents/codex1/tmp/yeyi-smoke-profile-${runId}`;
 const pagePort = 18891 + (process.pid % 1000);
@@ -87,7 +86,7 @@ try {
     })
   `);
 
-  const testUrl = `http://127.0.0.1:${pagePort}/test-page.html`;
+  const testUrl = `http://127.0.0.1:${pagePort}/tests/test-page.html`;
   const createdTarget = await send(browser, "Target.createTarget", { url: testUrl });
   const attachedPage = await send(browser, "Target.attachToTarget", {
     targetId: createdTarget.targetId,
@@ -371,7 +370,7 @@ function serveStatic(root, port) {
   const server = createServer(async (request, response) => {
     try {
       const url = new URL(request.url, `http://127.0.0.1:${port}`);
-      const relativePath = decodeURIComponent(url.pathname).replace(/^\/+/, "") || "test-page.html";
+      const relativePath = decodeURIComponent(url.pathname).replace(/^\/+/, "") || "tests/test-page.html";
       const fullPath = resolve(root, relativePath);
       if (!fullPath.startsWith(resolve(root))) {
         response.writeHead(403);

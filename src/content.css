@@ -1,6 +1,8 @@
 /* 雅译内容样式 v0.5 — Material Design 3 */
 
-/* ===== 译文块 ===== */
+/* ===== 译文块 =====
+   注意:本节(译块/等待动画/失败标记/相关 keyframes)在 content.js 的 SHADOW_CSS
+   里有一份 shadow root 注入副本(页面 CSS 穿不过 shadow 边界),改动时同步两处。 */
 
 /* 译文外壳:引擎移植自 read-frog,每个翻译单元的原文锚点后插入此 span,
    内部先放 spinner,得到译文后替换为译块。壳本身不产生视觉盒子。 */

@@ -71,6 +71,7 @@
     units: [],
     unitedNodes: new WeakSet(),       // 已归入某单元的节点，避免 SPA 重扫时重复建单元
     originalContentMap: new Map(),    // 替换模式下容器 → 原始 innerHTML,用于还原
+    shadowRoots: new Set(),           // 本轮遍历发现的 open shadow root(查段落/清理/注样式都要用)
     queue: new Set(),
     processing: false,
     contextRefining: false,
@@ -211,6 +212,7 @@
     state.units = [];
     state.unitedNodes = new WeakSet();
     state.originalContentMap = new Map();
+    state.shadowRoots = new Set();
     state.queue.clear();
     state.nextUnitId = 1;
     state.walkId = `w${Date.now().toString(36)}_${Math.floor(Math.random() * 1e6).toString(36)}`;
@@ -295,6 +297,14 @@
       const ancestor = el.parentElement?.closest(`[${PARAGRAPH_ATTR}]`);
       if (!ancestor || !root.contains(ancestor)) collectUnitsFromWalked(el, state.walkId);
     }
+    // shadow root 内的段落单独收集;顶层判定只看同一棵 shadow 树(见 observeShadowParagraphs)。
+    for (const shadowRoot of state.shadowRoots) {
+      if (!shadowRoot?.host?.isConnected) continue;
+      const shadowParagraphs = shadowRoot.querySelectorAll?.(`[${PARAGRAPH_ATTR}][${WALKED_ATTR}="${cssEscape(state.walkId)}"]`) || [];
+      for (const el of shadowParagraphs) {
+        if (!el.parentElement?.closest(`[${PARAGRAPH_ATTR}]`)) collectUnitsFromWalked(el, state.walkId);
+      }
+    }
   }
 
   function queueAllUnitsForContextRefine() {
@@ -315,6 +325,58 @@
   }
 
   // ══════════════════════════ DOM 引擎(移植 read-frog) ══════════════════════
+
+  // shadow root 内注入的译块样式副本。页面级 content.css 与 @keyframes 都穿不过
+  // shadow 边界——尤其 .yeyi-translation 默认 opacity:0 靠 yeyiFadeSlideIn 淡入,
+  // 不注入该动画的话 shadow 内译文会永远不可见。改 content.css 译块段时同步这里。
+  // 暗色主题选择器由 :root[data-yeyi-theme] 换成 :host-context([data-yeyi-theme])。
+  const SHADOW_CSS = `
+.yeyi-content-wrapper { font: inherit; color: inherit; line-height: inherit; letter-spacing: inherit; word-spacing: inherit; }
+.yeyi-translation-only { font: inherit; color: inherit; line-height: inherit; letter-spacing: inherit; word-spacing: inherit; }
+.yeyi-translation { display: block; box-sizing: border-box; max-width: 100%; margin: 0.32em 0 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; line-height: inherit; letter-spacing: inherit; word-spacing: inherit; opacity: 0; transform: translateY(4px); animation: yeyiFadeSlideIn 200ms cubic-bezier(0, 0, 0, 1) forwards; }
+.yeyi-translation-inline { display: inline; margin: 0; }
+.yeyi-translation[data-style="leftLine"] { padding-left: 0.72em; border-left: 2px solid color-mix(in srgb, currentColor 30%, transparent); opacity: 1; transform: none; }
+.yeyi-translation[data-style="underline"] { padding-bottom: 0.08em; border-bottom: 1px dashed color-mix(in srgb, currentColor 38%, transparent); }
+.yeyi-translation[data-style="softBlock"] { margin-top: 0.34em; padding: 0.38em 0.52em; border-radius: 8px; background: color-mix(in srgb, currentColor 6%, transparent); }
+:host-context([data-yeyi-theme="dark"]) .yeyi-translation[data-style="softBlock"] { background: color-mix(in srgb, currentColor 10%, transparent); }
+h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-translation, h5 .yeyi-translation, h6 .yeyi-translation { margin-top: 0.2em; }
+.yeyi-pending { display: inline-flex; align-items: baseline; gap: 0.18em; margin-left: 0.28em; color: inherit; opacity: 0.55; vertical-align: baseline; }
+.yeyi-pending .yeyi-dot { display: inline-block; width: 0.22em; height: 0.22em; border-radius: 999px; background: currentColor; animation: yeyiDotPulse 900ms ease-in-out infinite; }
+.yeyi-pending .yeyi-dot:nth-child(2) { animation-delay: 140ms; }
+.yeyi-pending .yeyi-dot:nth-child(3) { animation-delay: 280ms; }
+.yeyi-error { display: inline-block; box-sizing: content-box; width: 8px; height: 8px; margin: 0 0 0 0.15em; padding: 4px; border: 0; border-radius: 999px; background: color-mix(in srgb, #d93025 60%, transparent); background-clip: content-box; color: transparent; cursor: pointer; font: 0/0 system-ui; vertical-align: middle; transition: transform 100ms cubic-bezier(0.2, 0, 0, 1), background-color 100ms cubic-bezier(0.2, 0, 0, 1); }
+.yeyi-error:hover { transform: scale(1.25); background-color: #d93025; }
+:host-context([data-yeyi-theme="dark"]) .yeyi-error { background-color: color-mix(in srgb, #f28b82 60%, transparent); }
+:host-context([data-yeyi-theme="dark"]) .yeyi-error:hover { background-color: #f28b82; }
+@keyframes yeyiFadeSlideIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes yeyiDotPulse { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .yeyi-translation, .yeyi-pending .yeyi-dot { animation: none; transition: none; } .yeyi-translation { opacity: 1; transform: none; } }
+`;
+
+  // 记录发现的 open shadow root:加入清理/查段落名册,并补挂 MutationObserver
+  // (body 上的观察器看不到 shadow 内部的动态新增节点)。
+  function recordShadowRoot(root) {
+    if (!root || state.shadowRoots.has(root)) return;
+    state.shadowRoots.add(root);
+    try {
+      state.mutationObserver?.observe(root, { subtree: true, childList: true });
+    } catch {
+      // 个别宿主环境不允许观察该 root,忽略即可(初始内容仍已翻译)。
+    }
+  }
+
+  // 若节点落在 open shadow root 内,注入一份译块样式(幂等)。
+  function ensureShadowStylesFor(node) {
+    const root = node.getRootNode?.();
+    // shadow root = DOCUMENT_FRAGMENT_NODE(11) 且带 host;不用 instanceof,跨 iframe realm 不可靠。
+    if (!root || root.nodeType !== 11 || !root.host) return;
+    if (root.querySelector('style[data-yeyi-shadow-css]')) return;
+    const style = (root.host.ownerDocument || document).createElement("style");
+    style.setAttribute("data-yeyi-shadow-css", "1");
+    style.dataset.yeyi = "1";
+    style.textContent = SHADOW_CSS;
+    root.appendChild(style);
+  }
 
   function isHTMLElement(node) {
     return !!node && node.nodeType === Node.ELEMENT_NODE && "tagName" in node && "getAttribute" in node;
@@ -419,6 +481,15 @@
 
     element.setAttribute(WALKED_ATTR, walkId);
 
+    // 移植自 read-frog: utils/host/dom/traversal.ts — open shadow root 下钻打标签。
+    // shadow 子树独立成段,不参与宿主自身的段落/行内判定(返回值丢弃,与 read-frog 一致)。
+    if (element.shadowRoot) {
+      recordShadowRoot(element.shadowRoot);
+      for (const child of element.shadowRoot.children) {
+        if (isHTMLElement(child)) walkAndLabelElement(child, walkId);
+      }
+    }
+
     let hasInlineNodeChild = false;
     let forceBlock = false;
 
@@ -469,6 +540,8 @@
     if (isDontWalkIntoButTranslate(container) || isDontWalkIntoAndDontTranslate(container)) return;
 
     walkAndLabelElement(container, state.walkId);
+    // shadow root 里的段落 querySelectorAll 穿不过边界,单独收集观察(重复 observe 是 no-op)。
+    observeShadowParagraphs(observer);
 
     if (container.getAttribute(PARAGRAPH_ATTR) !== null && container.getAttribute(WALKED_ATTR) === state.walkId) {
       observer.observe(container);
@@ -482,6 +555,20 @@
       if (!ancestor || !container.contains(ancestor)) observer.observe(el);
     }
     renderStatus();
+  }
+
+  // 遍历已记录的 open shadow root,把其中的顶层段落交给 IntersectionObserver。
+  // 顶层判定只看同一棵 shadow 树(closest 不跨 shadow 边界;宿主侧单元与 shadow 内
+  // 单元物理上分属两棵树,不会重复收录同一文本)。
+  function observeShadowParagraphs(observer) {
+    if (!state.active || !state.walkId || !observer) return;
+    for (const shadowRoot of state.shadowRoots) {
+      if (!shadowRoot?.host?.isConnected) continue;
+      const paragraphs = shadowRoot.querySelectorAll?.(`[${PARAGRAPH_ATTR}][${WALKED_ATTR}="${cssEscape(state.walkId)}"]`) || [];
+      for (const el of paragraphs) {
+        if (!el.parentElement?.closest(`[${PARAGRAPH_ATTR}]`)) observer.observe(el);
+      }
+    }
   }
 
   function startObservers() {
@@ -586,6 +673,12 @@
       for (const child of element.childNodes) {
         if (isHTMLElement(child)) collectUnitsFromWalked(child, walkId);
       }
+      // 移植自 read-frog: translate/core/translation-walker.ts:70-76 — 下钻 open shadow root。
+      if (element.shadowRoot) {
+        for (const child of element.shadowRoot.children) {
+          if (isHTMLElement(child)) collectUnitsFromWalked(child, walkId);
+        }
+      }
     }
   }
 
@@ -669,6 +762,7 @@
       wrapper.style.display = "contents";
       const anchor = replaceNodes[replaceNodes.length - 1] || targetNode;
       anchor.parentNode?.insertBefore(wrapper, anchor.nextSibling);
+      if (wrapper.isConnected) ensureShadowStylesFor(wrapper);
       return wrapper.isConnected;
     }
 
@@ -679,6 +773,7 @@
     } else {
       targetNode.appendChild(wrapper);
     }
+    if (wrapper.isConnected) ensureShadowStylesFor(wrapper);
     return wrapper.isConnected;
   }
 
@@ -1095,6 +1190,16 @@
     root.querySelectorAll?.(`[${WALKED_ATTR}]`).forEach((el) => {
       for (const attr of WALK_ATTRS) el.removeAttribute(attr);
     });
+    // shadow root 内的译块/遍历标签/注入样式,light 树的 querySelectorAll 够不到,逐个清理。
+    for (const shadowRoot of state.shadowRoots) {
+      if (!shadowRoot?.host) continue;
+      shadowRoot.querySelectorAll?.(`.${WRAPPER_CLASS}`).forEach((wrapper) => wrapper.remove());
+      shadowRoot.querySelectorAll?.(`[${WALKED_ATTR}]`).forEach((el) => {
+        for (const attr of WALK_ATTRS) el.removeAttribute(attr);
+      });
+      shadowRoot.querySelector?.("style[data-yeyi-shadow-css]")?.remove();
+    }
+    state.shadowRoots = new Set();
 
     for (const record of state.units) record.status = "restored";
 

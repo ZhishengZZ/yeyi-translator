@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Yeyi Shadow DOM 手测页</title>
+<style>
+  body { font: 16px/1.6 system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; }
+  .case { border: 1px solid #ddd; border-radius: 8px; padding: 12px 16px; margin: 16px 0; }
+  .case h2 { font-size: 14px; color: #888; margin: 0 0 8px; }
+</style>
+</head>
+<body>
+  <h1>Shadow DOM translation test</h1>
+  <p>预期:开启翻译后,下面 5 个用例的英文全部出译文、样式正常(淡入可见),恢复原文后全部还原、shadow 里不残留。</p>
+
+  <div class="case">
+    <h2>用例 0 · 对照组(普通 light DOM)</h2>
+    <p>The quick brown fox jumps over the lazy dog near the river bank.</p>
+  </div>
+
+  <div class="case">
+    <h2>用例 1 · 声明式 Shadow DOM</h2>
+    <div id="dsd1">
+      <template shadowrootmode="open">
+        <p>Declarative shadow DOM paragraphs used to be invisible to the translator before version 0.5.</p>
+      </template>
+    </div>
+  </div>
+
+  <div class="case">
+    <h2>用例 2 · 嵌套 Shadow(shadow 套 shadow)</h2>
+    <div id="dsd2">
+      <template shadowrootmode="open">
+        <p>Outer shadow content should be translated as well.</p>
+        <div>
+          <template shadowrootmode="open">
+            <p>Nested shadow roots are walked recursively, matching the read-frog engine behavior.</p>
+          </template>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <div class="case">
+    <h2>用例 3 · JS attachShadow + slot(light 内容投影)</h2>
+    <div id="js-host">
+      <p>This light DOM paragraph is slotted into the shadow tree and must be translated exactly once.</p>
+    </div>
+  </div>
+
+  <div class="case">
+    <h2>用例 4 · shadow 内动态新增(2 秒后出现,验证 MutationObserver)</h2>
+    <div id="dyn-host"></div>
+  </div>
+
+  <script>
+    // 用例 3:构造 shadow root,把 light 子内容经 <slot> 投影,并附带 shadow 自有段落。
+    const jsHost = document.getElementById("js-host");
+    const jsRoot = jsHost.attachShadow({ mode: "open" });
+    jsRoot.innerHTML = "<p>Shadow-owned paragraph next to a slot element.</p><slot></slot>";
+
+    // 用例 4:先建空 shadow,2 秒后往里塞新段落(页面 body 观察器看不到,需 shadow 观察器)。
+    const dynHost = document.getElementById("dyn-host");
+    const dynRoot = dynHost.attachShadow({ mode: "open" });
+    dynRoot.innerHTML = "<p>Initial shadow paragraph, present before translation starts.</p>";
+    setTimeout(() => {
+      const late = document.createElement("p");
+      late.textContent = "This paragraph was appended into the shadow root two seconds later and should still be translated.";
+      dynRoot.appendChild(late);
+    }, 2000);
+  </script>
+</body>
+</html>
