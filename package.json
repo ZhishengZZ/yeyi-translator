@@ -1,6 +1,6 @@
 {
   "name": "yeyi-translator",
-  "version": "0.4.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "description": "雅译 - 面向 C 端的 AI 网页翻译扩展（原生 JS + MV3）",

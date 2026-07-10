@@ -2,14 +2,20 @@
   "manifest_version": 3,
   "name": "雅译 · AI 网页翻译",
   "description": "填写自己的 OpenAI 兼容模型 API Key 后，即可进行网页翻译、上下文精翻和搜索词翻译。",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "icons": {
     "16": "src/assets/yeyi-icon-16.png",
     "32": "src/assets/yeyi-icon-32.png",
     "48": "src/assets/yeyi-icon-48.png",
     "128": "src/assets/yeyi-icon-128.png"
   },
-  "permissions": ["storage", "activeTab", "scripting", "topSites", "favicon"],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "topSites",
+    "favicon"
+  ],
   "host_permissions": [
     "http://localhost/*",
     "http://127.0.0.1/*"
@@ -38,9 +44,15 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["src/content.js"],
-      "css": ["src/content.css"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/content.js"
+      ],
+      "css": [
+        "src/content.css"
+      ],
       "run_at": "document_idle",
       "all_frames": true,
       "match_about_blank": true
