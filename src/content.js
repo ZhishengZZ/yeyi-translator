@@ -27,6 +27,8 @@
     "munder", "munderover", "semantics"
   ]);
   // 既不进入、也不抽取文本的标签（脚本/媒体/表单输入/公式等）。
+  // 与 read-frog 有意分歧:BUTTON/SELECT/OPTION 雅译整个跳过(read-frog 按行内翻译),
+  // 按钮/下拉译了容易破坏控件布局,阅读场景收益低。要对齐时把三者移去 FORCE_INLINE。
   const DONT_WALK_AND_TRANSLATE_TAGS = new Set([
     "HEAD", "TITLE", "HR", "INPUT", "TEXTAREA", "IMG", "VIDEO", "AUDIO",
     "CANVAS", "SOURCE", "TRACK", "META", "SCRIPT", "NOSCRIPT", "STYLE",
@@ -397,14 +399,30 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
     return ["ruby", "ruby-base", "ruby-text", "ruby-base-container", "ruby-text-container"].includes(d);
   }
 
+  // 浅判定:节点自身是否行内翻译节点(文本节点带字,或行内元素)。移植自 read-frog filter.ts。
+  function isShallowInlineTransNode(node) {
+    if (isTextNode(node) && node.textContent?.trim()) return true;
+    if (isHTMLElement(node)) return isShallowInlineHTMLElement(node);
+    return false;
+  }
+
+  // 首字下沉(drop-cap):float:left 的大号首字母 + 后继是行内节点时按行内处理,
+  // 否则会被当成独立块,把新闻站正文第一段割裂成两个单元。移植自 read-frog filter.ts。
+  function isLargeInitialFloatingLetter(element) {
+    const computedStyle = window.getComputedStyle(element);
+    return computedStyle.float === "left" && !!element.nextSibling && isShallowInlineTransNode(element.nextSibling);
+  }
+
   function isShallowInlineHTMLElement(element) {
     if (!element.textContent?.trim()) return false;
     if (FORCE_BLOCK_TAGS.has(element.tagName)) return false;
+    if (isLargeInitialFloatingLetter(element)) return true;
     return isInlineDisplay(window.getComputedStyle(element).display);
   }
 
   function isShallowBlockHTMLElement(element) {
     if (FORCE_BLOCK_TAGS.has(element.tagName)) return true;
+    if (isLargeInitialFloatingLetter(element)) return false;
     return !isInlineDisplay(window.getComputedStyle(element).display);
   }
 
