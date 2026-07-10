@@ -7,7 +7,7 @@
 **网页翻译，交给你自己的模型 —— 自带 Key、原地读全文、还讲究信达雅。**
 
 [![License](https://img.shields.io/badge/许可证-GPLv3-4c8eda?style=flat-square)](./LICENSE)
-[![Release](https://img.shields.io/badge/版本-0.4.0--preview-f0883e?style=flat-square)](https://github.com/ZhishengZZ/yeyi-translator/releases)
+[![Release](https://img.shields.io/badge/版本-0.6.0-f0883e?style=flat-square)](https://github.com/ZhishengZZ/yeyi-translator/releases)
 [![Chrome MV3](https://img.shields.io/badge/Chrome-Manifest%20V3-3fb950?style=flat-square)](#-安装)
 [![Dependencies](https://img.shields.io/badge/依赖-零-8957e5?style=flat-square)](#)
 
@@ -29,11 +29,14 @@
 🔎 **一个会替你说英文的搜索框。**
 在新标签页搜索框里敲中文，雅译顺手递回一条地道的英文查询词，直接拿去搜。跨语言搜索，不打断手感。*（需手动开启。）*
 
+🖱️ **划词即译。**
+选中任意一句，旁边冒出一个 **译** 小气泡——点一下就地显示译文，按你选的风格来，还能一键复制。*（需手动开启。）*
+
 🎭 **六种译笔，不止一种腔调。**
 `信达雅` 是招牌——忠实、通顺、还带点雅致，底子是严复和奈达的对等理论。想换个味儿？**精准忠实 / 自然中文 / 技术文档 / 商务正式 / 文学润色** 随你切，每种在忠实度、语气和术语上都各有各的规矩。
 
 🧩 **一个不漏字的引擎。**
-雅译把每个可见文字都归到它真正所属的块上，再深的套娃布局（React/Vue/Next 应用、文档站、新闻站）也能整段译全——不漏段，也不会被外层 `<div>` 带出重复译块。
+雅译把每个可见文字都归到它真正所属的块上，还会钻进 **iframe 和 open Shadow DOM**——再深的套娃布局（React/Vue/Next 应用、文档站、小说阅读页）也能整段译全，不漏段、不重块。顽固站点交给站点规则收拾。
 
 📖 **默认双语对照，难句还能再抠。**
 原文译文并排读，或者原地替换、一键还原。碰上啃不动的长难句？点一下，就带着页面大纲、标题层级和前后段再精译一遍。
@@ -43,7 +46,7 @@
 
 ## 🚀 安装
 
-> 预览版，用「加载已解压的扩展程序」装。
+> 暂无商店版，用「加载已解压的扩展程序」装。
 
 1. 下载 [最新 Release 压缩包](https://github.com/ZhishengZZ/yeyi-translator/releases)（或克隆本仓库）。
 2. 打开 `chrome://extensions/`，右上角开启**开发者模式**。
@@ -80,4 +83,4 @@ agent = 智能体
 
 ## 🧪 版本状态
 
-**0.4.0 · 预览版** —— 能用、好用，但还是预发布，难免有毛边。欢迎提 Issue 和 PR。
+**0.6.0** —— 日常阅读已相当完备（iframe 与 Shadow DOM 内翻译、站点规则、划词即译），但仍属 1.0 前版本。欢迎提 Issue 和 PR。

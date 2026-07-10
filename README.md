@@ -7,7 +7,7 @@
 **AI webpage translation you actually control — bring your own key, read anything, in your own words.**
 
 [![License](https://img.shields.io/badge/License-GPLv3-4c8eda?style=flat-square)](./LICENSE)
-[![Release](https://img.shields.io/badge/release-0.4.0--preview-f0883e?style=flat-square)](https://github.com/ZhishengZZ/yeyi-translator/releases)
+[![Release](https://img.shields.io/badge/release-0.6.0-f0883e?style=flat-square)](https://github.com/ZhishengZZ/yeyi-translator/releases)
 [![Chrome MV3](https://img.shields.io/badge/Chrome-Manifest%20V3-3fb950?style=flat-square)](#-install)
 [![Dependencies](https://img.shields.io/badge/dependencies-zero-8957e5?style=flat-square)](#)
 
@@ -29,11 +29,14 @@ The popup, options, and new-tab page all speak Chrome's own design language. The
 🔎 **A search box that speaks English for you.**
 Type Chinese into the new-tab search box and Yeyi hands back a clean English query to search with. Cross-language search without breaking your stride. *(Opt-in.)*
 
+🖱️ **Select-to-translate.**
+Highlight any sentence and a small **译** bubble appears — one click shows the translation right there, in your chosen style, ready to copy. *(Opt-in.)*
+
 🎭 **Six translation voices, not one.**
 `信达雅` is the house style — faithful, fluent, and quietly elegant, shaped by Yan Fu and Nida's work on equivalence. Want a different register? Flip to **Precise**, **Natural**, **Technical**, **Business**, or **Literary** — each with its own rules for fidelity, tone, and terminology.
 
 🧩 **An engine that doesn't drop text.**
-Yeyi clusters every visible text node onto the block it really belongs to, so deeply nested layouts (React/Vue/Next apps, docs sites, news) get translated in full — no skipped paragraphs, no duplicate blocks spat out by wrapper `<div>`s.
+Yeyi clusters every visible text node onto the block it really belongs to — and reaches into **iframes and open Shadow DOM** too — so deeply nested apps, docs sites, and reader pages get translated in full, with no skipped paragraphs and no duplicate blocks. Per-site rules handle the stubborn cases.
 
 📖 **Bilingual by default, surgical on demand.**
 Read the original and the translation side by side, or replace in place and restore with one click. Hit a dense passage? One tap runs a context-aware second pass using the page outline, headings, and neighboring paragraphs.
@@ -43,7 +46,7 @@ It lives in `chrome.storage.local`, is never injected into the page, and never s
 
 ## 🚀 Install
 
-> Preview build — load it unpacked.
+> Load it unpacked — no Web Store build yet.
 
 1. Grab the [latest release zip](https://github.com/ZhishengZZ/yeyi-translator/releases) (or clone this repo).
 2. Open `chrome://extensions/` and switch on **Developer mode** (top-right).
@@ -80,4 +83,4 @@ Big thanks to **[@mengxi-ream](https://github.com/mengxi-ream)** and the Read Fr
 
 ## 🧪 Status
 
-**0.4.0 · preview** — real and usable, still pre-release, so expect a few rough edges. Issues and PRs welcome.
+**0.6.0** — feature-rich for everyday reading (translation inside iframes & Shadow DOM, per-site rules, select-to-translate), still pre-1.0. Issues and PRs welcome.
