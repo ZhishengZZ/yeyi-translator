@@ -8,9 +8,11 @@ import {
   normalizeBaseUrl,
   normalizeHostList,
   nowDayKey,
+  parseCustomSiteRules,
   providerCapabilities,
   shortHash
 } from "./shared.js";
+import { BUILT_IN_SITE_RULES } from "./site-rules.js";
 
 const runtimeCache = new Map();
 const inflightTabs = new Set();
@@ -206,7 +208,8 @@ function sanitizeSettings(settings) {
     enableNewTabOverride: merged.enableNewTabOverride !== false,
     theme: ["auto", "light", "dark"].includes(merged.theme) ? merged.theme : "auto",
     alwaysTranslateHosts: normalizeHostList(merged.alwaysTranslateHosts),
-    neverTranslateHosts: normalizeHostList(merged.neverTranslateHosts)
+    neverTranslateHosts: normalizeHostList(merged.neverTranslateHosts),
+    customSiteRules: typeof merged.customSiteRules === "string" ? merged.customSiteRules : ""
   };
 }
 
@@ -217,7 +220,9 @@ function publicContentSettings(settings) {
     ...safe,
     // content 只知道是否已配置 Key，拿不到 Key 本体。
     hasApiKey: Boolean(apiKey?.trim()),
-    globalTranslateActive: Boolean(globalState.enabled)
+    globalTranslateActive: Boolean(globalState.enabled),
+    // 站点规则下发给 content:用户自定义在前(优先),内置在后。非法 JSON 已被忽略。
+    siteRules: [...parseCustomSiteRules(clean.customSiteRules).rules, ...BUILT_IN_SITE_RULES]
   }));
 }
 

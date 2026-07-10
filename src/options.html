@@ -130,6 +130,11 @@
             <span>永不翻译的网站</span>
             <textarea id="neverTranslateHosts" spellcheck="false" placeholder="bank.example.com&#10;mail.example.com"></textarea>
           </label>
+          <label>
+            <span>站点规则（高级，JSON 数组）</span>
+            <textarea id="customSiteRules" spellcheck="false" placeholder='[{"matches":"example.com","excludeSelectors":[".sidebar"],"minCharacters":4}]'></textarea>
+          </label>
+          <p class="section-note">给单个网站定制翻译范围：matches 匹配网址（支持 *）；excludeSelectors 排除区域；includeSelectors 声明后只翻命中区域；forceBlockSelectors / forceInlineSelectors 强制块级 / 行内；minCharacters / minWords 忽略过短文本；injectedCss 在翻译时注入页面样式（如放开被折叠截断的正文）。自定义规则优先于内置规则，留空即用内置。</p>
         </article>
 
         <article class="settings-section">

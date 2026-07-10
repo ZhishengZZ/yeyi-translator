@@ -89,6 +89,7 @@
     floatingRetryBtn: null,
     floatingContextBtn: null,
     hiddenForHost: false,
+    siteRule: null,                   // 当前 URL 生效的站点规则(合并后),startTranslation 时计算
     nextUnitId: 1,
     searchAssistEnabled: false,
     searchAssistMode: "suggest",
@@ -218,6 +219,8 @@
     state.queue.clear();
     state.nextUnitId = 1;
     state.walkId = `w${Date.now().toString(36)}_${Math.floor(Math.random() * 1e6).toString(36)}`;
+    state.siteRule = computeEffectiveSiteRule(settings.siteRules, location.href);
+    applySiteRuleCss();
 
     updatePageTheme();
     document.documentElement.dataset.yeyiMode = state.mode;
@@ -380,6 +383,132 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
     root.appendChild(style);
   }
 
+  // ─────────────── 站点规则(移植 read-frog filter.ts + site-rules) ───────────────
+  // 规则由 background 下发(settings.siteRules:用户自定义在前、内置在后),
+  // 此处按当前 URL 合并出生效规则:选择器组取并集,minCharacters/minWords 取最大,
+  // injectedCss 拼接。用户选择器可能非法,所有 matches/closest 都走 try/catch。
+
+  function globToRegExp(glob) {
+    const escaped = String(glob).replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+    return new RegExp(`^${escaped}$`, "i");
+  }
+
+  // 匹配一条 pattern:含 "://" 按整 URL 通配;否则按 "host[/path]" 通配。
+  function matchSitePattern(pattern, url) {
+    const p = String(pattern || "").trim();
+    if (!p) return false;
+    try {
+      if (p.includes("://")) return globToRegExp(p).test(url.href);
+      const slash = p.indexOf("/");
+      const hostPattern = slash === -1 ? p : p.slice(0, slash);
+      const pathPattern = slash === -1 ? "" : p.slice(slash);
+      if (!globToRegExp(hostPattern).test(url.hostname)) return false;
+      if (!pathPattern) return true;
+      return globToRegExp(pathPattern.endsWith("*") ? pathPattern : `${pathPattern}*`).test(url.pathname);
+    } catch {
+      return false;
+    }
+  }
+
+  function toPatternList(value) {
+    if (Array.isArray(value)) return value;
+    return value ? [value] : [];
+  }
+
+  function ruleMatchesUrl(rule, url) {
+    if (!toPatternList(rule.matches).some((pattern) => matchSitePattern(pattern, url))) return false;
+    if (toPatternList(rule.excludeMatches).some((pattern) => matchSitePattern(pattern, url))) return false;
+    return true;
+  }
+
+  // 合并所有命中规则 → 生效规则(read-frog getEffectiveSiteRule 语义:无 include 声明时为 null=全放行)。
+  function computeEffectiveSiteRule(rules, href) {
+    if (!Array.isArray(rules) || !rules.length) return null;
+    let url;
+    try {
+      url = new URL(href);
+    } catch {
+      return null;
+    }
+    const joinSelectors = (lists) => {
+      const flat = lists.flat().map((s) => String(s || "").trim()).filter(Boolean);
+      return flat.length ? flat.join(", ") : null;
+    };
+    const matched = rules.filter((rule) => rule && ruleMatchesUrl(rule, url));
+    if (!matched.length) return null;
+    return {
+      includeSelector: joinSelectors(matched.map((r) => r.includeSelectors || [])),
+      excludeSelector: joinSelectors(matched.map((r) => r.excludeSelectors || [])),
+      forceBlockSelector: joinSelectors(matched.map((r) => r.forceBlockSelectors || [])),
+      forceInlineSelector: joinSelectors(matched.map((r) => r.forceInlineSelectors || [])),
+      minCharacters: Math.max(0, ...matched.map((r) => Number(r.minCharacters) || 0)),
+      minWords: Math.max(0, ...matched.map((r) => Number(r.minWords) || 0)),
+      injectedCss: matched.map((r) => String(r.injectedCss || "").trim()).filter(Boolean).join("\n") || null
+    };
+  }
+
+  function safeMatches(element, selector) {
+    if (!selector) return false;
+    try {
+      return !!element.matches?.(selector);
+    } catch {
+      return false;
+    }
+  }
+
+  function safeClosest(element, selector) {
+    if (!selector) return null;
+    try {
+      return element.closest?.(selector) || null;
+    } catch {
+      return null;
+    }
+  }
+
+  // 移植自 read-frog filter.ts isSiteRuleExcludedElement:排除优先,但元素自身或
+  // 子树命中 include 时重新纳入(github 式"大范围排除+白名单捞回"依赖此优先级)。
+  function isSiteRuleExcludedElement(element) {
+    const rule = state.siteRule;
+    if (!rule?.excludeSelector) return false;
+    if (!safeMatches(element, rule.excludeSelector)) return false;
+    if (rule.includeSelector) {
+      if (safeMatches(element, rule.includeSelector)) return false;
+      try {
+        if (element.querySelector?.(rule.includeSelector)) return false;
+      } catch {
+        // 非法选择器当作未命中
+      }
+    }
+    return true;
+  }
+
+  // 移植自 read-frog filter.ts isWithinIncludeScope:声明了 includeSelectors 的规则
+  // 是白名单闸门,只有命中区域内的元素才能成为翻译段落;未声明则全放行。
+  function isWithinIncludeScope(element) {
+    const rule = state.siteRule;
+    return !rule?.includeSelector || !!safeClosest(element, rule.includeSelector);
+  }
+
+  function isSiteRuleForceBlock(element) {
+    return isHTMLElement(element) && safeMatches(element, state.siteRule?.forceBlockSelector);
+  }
+
+  function isSiteRuleForceInline(element) {
+    return isHTMLElement(element) && safeMatches(element, state.siteRule?.forceInlineSelector);
+  }
+
+  // 按规则注入页面 CSS(如放开 line-clamp 截断);restorePage 时移除。
+  function applySiteRuleCss() {
+    const css = state.siteRule?.injectedCss;
+    if (!css) return;
+    if (document.querySelector("style[data-yeyi-site-css]")) return;
+    const style = document.createElement("style");
+    style.setAttribute("data-yeyi-site-css", "1");
+    style.dataset.yeyi = "1";
+    style.textContent = css;
+    (document.head || document.documentElement).appendChild(style);
+  }
+
   function isHTMLElement(node) {
     return !!node && node.nodeType === Node.ELEMENT_NODE && "tagName" in node && "getAttribute" in node;
   }
@@ -435,6 +564,7 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
   function isDontWalkIntoAndDontTranslate(element) {
     if (DONT_WALK_AND_TRANSLATE_TAGS.has(element.tagName)) return true;
     if (element.closest?.("[data-yeyi='1']")) return true; // 雅译自身注入的 UI
+    if (isSiteRuleExcludedElement(element)) return true; // 站点规则排除区域(含 include 重纳入)
     if (element.isContentEditable) return true;
     const style = window.getComputedStyle(element);
     if (style.display === "none" || style.visibility === "hidden") return true;
@@ -531,8 +661,8 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
       }
     }
 
-    // 有行内文本子节点 → 该元素是「段落」翻译触发单元。
-    if (hasInlineNodeChild) element.setAttribute(PARAGRAPH_ATTR, "");
+    // 有行内文本子节点 → 该元素是「段落」翻译触发单元(受站点规则 include 白名单闸门约束)。
+    if (hasInlineNodeChild && isWithinIncludeScope(element)) element.setAttribute(PARAGRAPH_ATTR, "");
 
     forceBlock = forceBlock || FORCE_BLOCK_TAGS.has(element.tagName);
 
@@ -541,7 +671,7 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
     }
 
     const isInlineNode = isShallowInlineHTMLElement(element);
-    if (isShallowBlockHTMLElement(element) || forceBlock) {
+    if (isShallowBlockHTMLElement(element) || forceBlock || isSiteRuleForceBlock(element)) {
       element.setAttribute(BLOCK_ATTR, "");
     } else if (isInlineNode) {
       element.setAttribute(INLINE_ATTR, "");
@@ -717,6 +847,16 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
     const source = serialized.text.trim();
     const plainSource = serialized.plainText.trim();
     if (!passesTextFilter(plainSource, state.targetLanguage)) return;
+    // 站点规则门槛:过短文本跳过。minWords 只约束不含 CJK 的文本——CJK 无空格分词,
+    // 按词数会误杀整段中文(与 read-frog 的规则本意一致,用于 wikipedia 式短碎链接)。
+    const siteRule = state.siteRule;
+    if (siteRule) {
+      if (siteRule.minCharacters && plainSource.length < siteRule.minCharacters) return;
+      if (siteRule.minWords && !/[぀-ヿ㐀-鿿가-힯]/.test(plainSource)) {
+        const wordCount = (plainSource.match(/[A-Za-z0-9]+(?:['-][A-Za-z0-9]+)*/g) || []).length;
+        if (wordCount < siteRule.minWords) return;
+      }
+    }
 
     transNodes.forEach((n) => state.unitedNodes.add(n));
 
@@ -1042,7 +1182,10 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
   // 译文按块级还是行内排版(移植 insertion 优先级:强制行内 > 强制块 > 节点行内 > 节点块级)。
   function decideBlockTranslation(record) {
     const target = record.targetNode;
-    if (isForceInlineTranslation(target)) return false;
+    // 优先级对齐 read-frog translation-insertion.ts:93 —
+    // siteRuleForceBlock > forceInline(含站点规则) > forceBlock > inline > block。
+    if (isSiteRuleForceBlock(target)) return true;
+    if (isForceInlineTranslation(target) || isSiteRuleForceInline(target)) return false;
     if (record.forceBlock) return true;
     if (isInlineTransNode(target)) return false;
     if (isBlockTransNode(target)) return true;
@@ -1218,6 +1361,9 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
       shadowRoot.querySelector?.("style[data-yeyi-shadow-css]")?.remove();
     }
     state.shadowRoots = new Set();
+    // 站点规则注入的页面 CSS 一并移除,生效规则复位。
+    document.querySelector("style[data-yeyi-site-css]")?.remove();
+    state.siteRule = null;
 
     for (const record of state.units) record.status = "restored";
 

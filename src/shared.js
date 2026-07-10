@@ -183,7 +183,8 @@ export const DEFAULT_SETTINGS = {
   enableNewTabOverride: true,
   theme: "auto",
   alwaysTranslateHosts: [],
-  neverTranslateHosts: []
+  neverTranslateHosts: [],
+  customSiteRules: ""
 };
 
 export const QUALITY_LABELS = {
@@ -253,6 +254,23 @@ export function glossaryToText(glossary) {
       return `- ${source.trim()} => ${target.trim()}`;
     })
     .join("\n");
+}
+
+// 解析设置页"站点规则"文本(JSON 数组)。background 下发与 options 校验共用。
+// 宽容处理:非法 JSON / 非数组 / 缺 matches 的条目 → 忽略并给出人话错误,不炸流程。
+export function parseCustomSiteRules(text) {
+  const trimmed = String(text || "").trim();
+  if (!trimmed) return { rules: [], error: "" };
+  let parsed;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch (error) {
+    return { rules: [], error: `站点规则 JSON 解析失败：${error?.message || error}` };
+  }
+  if (!Array.isArray(parsed)) return { rules: [], error: "站点规则需为 JSON 数组。" };
+  const rules = parsed.filter((rule) => rule && typeof rule === "object" && rule.matches);
+  const dropped = parsed.length - rules.length;
+  return { rules, error: dropped > 0 ? `${dropped} 条规则缺少 matches 字段，已忽略。` : "" };
 }
 
 export function shortHash(input) {

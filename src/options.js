@@ -5,7 +5,8 @@ import {
   SITE_HOST_PRESETS,
   hostListToText,
   mergeSettings,
-  normalizeHostList
+  normalizeHostList,
+  parseCustomSiteRules
 } from "./shared.js";
 import { withTimeout } from "./utils.js";
 import { applyTheme } from "./theme.js";
@@ -37,6 +38,7 @@ const ids = [
   "enableNewTabOverride",
   "alwaysTranslateHosts",
   "neverTranslateHosts",
+  "customSiteRules",
   "glossary"
 ];
 
@@ -157,6 +159,7 @@ function readForm() {
     enableNewTabOverride: form.enableNewTabOverride.checked,
     alwaysTranslateHosts: normalizeHostList(form.alwaysTranslateHosts.value),
     neverTranslateHosts: normalizeHostList(form.neverTranslateHosts.value),
+    customSiteRules: form.customSiteRules.value,
     glossary: form.glossary.value
   };
 }
@@ -171,7 +174,8 @@ async function save() {
   // 主题改了要立即应用到当前页。
   applyTheme(settings.theme);
   // auto-save 后不 re-render：表单已是用户输入的正确值，render 会重置光标和 textarea 位置。
-  showToast("已保存");
+  const siteRuleCheck = parseCustomSiteRules(form.customSiteRules.value);
+  showToast(siteRuleCheck.error ? `已保存（站点规则：${siteRuleCheck.error}）` : "已保存");
 }
 
 async function applyProviderPreset() {
