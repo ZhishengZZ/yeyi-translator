@@ -481,6 +481,11 @@ button:focus-visible, .icon-button:focus-visible, .tool-btn:focus-visible,
 /* ---------- Newtab search surface ---------- */
 
 .ntp-body { min-height: 100vh; background: var(--bg); }
+/* 极简态(默认):隐藏品牌头、卡片标题与说明,只留搜索框与磁贴,接近浏览器原生新标签页。 */
+.ntp[data-enhanced="false"] .ntp-topbar,
+.ntp[data-enhanced="false"] .ntp-search-card > header,
+.ntp[data-enhanced="false"] .ntp-search-card > .section-note,
+.ntp[data-enhanced="false"] .ntp-tiles-card > header { display: none; }
 .ntp {
   display: flex;
   flex-direction: column;

@@ -35,6 +35,7 @@ async function init() {
   }
   applyTheme(settings.theme);
   renderThemeButton();
+  applyEnhanced();
   renderSuggestionButton();
 
   els.form.addEventListener("submit", (event) => {
@@ -48,7 +49,7 @@ async function init() {
   els.voiceBtn.addEventListener("click", startVoiceSearch);
   els.lensBtn.addEventListener("click", () => window.open("https://lens.google.com/", "_blank", "noopener"));
   els.themeToggle.addEventListener("click", toggleTheme);
-  els.disableOverride.addEventListener("click", toggleSuggestions);
+  els.disableOverride.addEventListener("click", toggleEnhanced);
 
   renderTiles();
 }
@@ -266,12 +267,18 @@ function renderThemeButton() {
   els.themeToggle.title = `主题：${themeLabel(settings.theme)}（点击切换）`;
 }
 
+// 极简态(默认):隐藏品牌头/标题/说明,只留搜索框与磁贴。增强态显示雅译品牌头与中译英建议。
+function applyEnhanced() {
+  const enhanced = settings.enableNewTabOverride !== false;
+  document.querySelector("main.ntp").dataset.enhanced = enhanced ? "true" : "false";
+}
+
 function renderSuggestionButton() {
   const enabled = settings.enableNewTabOverride !== false;
-  els.disableOverride.textContent = enabled ? "隐藏建议" : "显示建议";
+  els.disableOverride.textContent = enabled ? "恢复原生简洁" : "显示雅译增强";
   els.disableOverride.title = enabled
-    ? "隐藏中文搜索词的英文建议"
-    : "显示中文搜索词的英文建议";
+    ? "隐藏雅译品牌头与英文搜索建议，恢复接近原生的新标签页"
+    : "显示雅译品牌头与英文搜索词建议";
 }
 
 async function toggleTheme() {
@@ -285,8 +292,9 @@ async function toggleTheme() {
   }
 }
 
-async function toggleSuggestions() {
+async function toggleEnhanced() {
   settings.enableNewTabOverride = settings.enableNewTabOverride === false;
+  applyEnhanced();
   renderSuggestionButton();
   if (settings.enableNewTabOverride === false) hideOmni();
   else scheduleSuggest();
@@ -294,6 +302,7 @@ async function toggleSuggestions() {
     await runtime({ type: "YEYI_SAVE_SETTINGS", settings: { enableNewTabOverride: settings.enableNewTabOverride } });
   } catch {
     settings.enableNewTabOverride = !settings.enableNewTabOverride;
+    applyEnhanced();
     renderSuggestionButton();
   }
 }

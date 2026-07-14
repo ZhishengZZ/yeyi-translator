@@ -212,7 +212,7 @@ export const DEFAULT_SETTINGS = {
   searchBoxTranslate: false,
   searchBoxTranslateMode: "suggest",
   selectionTranslate: true,
-  enableNewTabOverride: true,
+  enableNewTabOverride: false,
   theme: "auto",
   alwaysTranslateHosts: [],
   neverTranslateHosts: [],
