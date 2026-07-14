@@ -125,6 +125,10 @@ async function handleMessage(message, sender) {
       return translateSearchQuery(message.text || "");
     case "YEYI_TRANSLATE_SELECTION":
       return translateSelection(message.text || "", message.context || "");
+    case "YEYI_SUMMARIZE":
+      return summarizePage(message.mainText || "", message.pageContext || {}, sender);
+    case "YEYI_CHAT":
+      return chatTurn(message.messages || [], sender);
     case "YEYI_TEST_PROVIDER":
       return testProvider(message.settingsOverride || {});
     case "YEYI_CLEAR_CACHE":
@@ -212,7 +216,10 @@ function sanitizeSettings(settings) {
     theme: ["auto", "light", "dark"].includes(merged.theme) ? merged.theme : "auto",
     alwaysTranslateHosts: normalizeHostList(merged.alwaysTranslateHosts),
     neverTranslateHosts: normalizeHostList(merged.neverTranslateHosts),
-    customSiteRules: typeof merged.customSiteRules === "string" ? merged.customSiteRules : ""
+    customSiteRules: typeof merged.customSiteRules === "string" ? merged.customSiteRules : "",
+    labSummary: Boolean(merged.labSummary),
+    summaryMaxChars: clampNumber(merged.summaryMaxChars, 4000, 60000, DEFAULT_SETTINGS.summaryMaxChars),
+    summaryStyle: ["concise", "detailed"].includes(merged.summaryStyle) ? merged.summaryStyle : DEFAULT_SETTINGS.summaryStyle
   };
 }
 
@@ -591,6 +598,73 @@ async function translateSelection(text, context) {
   };
 }
 
+// AI 网页总结(实验室):正文已由 content 抽取好,这里只做单次 LLM 调用产出结构化摘要。
+// 记 stats,让用户感知用量。
+async function summarizePage(mainText, pageContext, sender) {
+  const settings = await getSettings();
+  ensureConfigured(settings);
+  await ensureHostPermission(settings);
+  const text = String(mainText || "").replace(/\s+/g, " ").trim();
+  if (!text) throw new Error("当前页面没有可总结的正文。");
+  const truncated = text.slice(0, Math.max(4000, settings.summaryMaxChars));
+  const truncatedNote = text.length > truncated.length
+    ? `（页面较长，已截取前 ${truncated.length} 字）`
+    : "";
+  const startedAt = Date.now();
+  const summary = await withRetry(
+    () => callSummarizeApi(truncated, pageContext || {}, settings),
+    settings.maxRetries
+  );
+  await updateStats({
+    providerName: settings.providerName,
+    model: settings.model,
+    host: hostFromSender(sender),
+    requestedItems: 1,
+    cachedItems: 0,
+    requestedChars: truncated.length,
+    cachedChars: 0,
+    promptTokens: summary.__usage.promptTokens,
+    completionTokens: summary.__usage.completionTokens,
+    totalTokens: summary.__usage.totalTokens
+  });
+  return {
+    summary: summary.summary,
+    bullets: summary.bullets,
+    keyInfo: summary.keyInfo,
+    truncatedNote,
+    latencyMs: Date.now() - startedAt
+  };
+}
+
+// AI 对话(实验室,总结后追问):content 维护 messages 数组整体透传,这里只做调用 + 记账。
+async function chatTurn(messages, sender) {
+  const settings = await getSettings();
+  ensureConfigured(settings);
+  await ensureHostPermission(settings);
+  const list = Array.isArray(messages) ? messages : [];
+  if (!list.length) throw new Error("没有可发送的对话内容。");
+  // 防爆:截断到最近 N 轮(content 侧已截,这里再兜底)。
+  const trimmed = list.slice(-16);
+  const startedAt = Date.now();
+  const reply = await withRetry(
+    () => callChatApi(trimmed, settings),
+    settings.maxRetries
+  );
+  await updateStats({
+    providerName: settings.providerName,
+    model: settings.model,
+    host: hostFromSender(sender),
+    requestedItems: 1,
+    cachedItems: 0,
+    requestedChars: 0,
+    cachedChars: 0,
+    promptTokens: reply.__usage.promptTokens,
+    completionTokens: reply.__usage.completionTokens,
+    totalTokens: reply.__usage.totalTokens
+  });
+  return { text: reply.text, latencyMs: Date.now() - startedAt };
+}
+
 function ensureConfigured(settings) {
   if (!settings.baseUrl?.trim()) {
     throw new Error("请先配置接口地址。");
@@ -775,6 +849,152 @@ async function callSelectionApi(text, context, settings) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+// AI 总结:正文 + 页面元信息 → 结构化摘要(TL;DR + 要点 + 关键信息)。
+async function callSummarizeApi(mainText, pageContext, settings) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), settings.requestTimeoutMs);
+  const endpoint = `${normalizeBaseUrl(settings.baseUrl)}/chat/completions`;
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${resolveApiKey(settings)}`
+      },
+      body: JSON.stringify(buildSummarizeRequestBody(mainText, pageContext, settings))
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      throw new ProviderError(`模型服务返回 ${response.status}：${trimErrorText(text)}`, response.status);
+    }
+    const data = JSON.parse(text);
+    const choice = data?.choices?.[0];
+    const content = choice?.message?.content;
+    if (!content) throw new Error("模型服务没有返回总结内容。");
+    if (choice?.finish_reason === "length") {
+      throw new Error("模型总结输出被长度限制截断，请减少正文或缩短总结风格后重试。");
+    }
+    const parsed = parseSummaryPayload(content);
+    parsed.__usage = normalizeUsage(data?.usage);
+    return parsed;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// AI 对话:透传 content 维护的 messages 数组(含 system 上下文)。
+async function callChatApi(messages, settings) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), settings.requestTimeoutMs);
+  const endpoint = `${normalizeBaseUrl(settings.baseUrl)}/chat/completions`;
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${resolveApiKey(settings)}`
+      },
+      body: JSON.stringify(buildChatRequestBody(messages, settings))
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      throw new ProviderError(`模型服务返回 ${response.status}：${trimErrorText(text)}`, response.status);
+    }
+    const data = JSON.parse(text);
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content) throw new Error("模型服务没有返回对话内容。");
+    const result = { text: String(content).trim(), __usage: normalizeUsage(data?.usage) };
+    return result;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function buildSummarizeRequestBody(mainText, pageContext, settings) {
+  const caps = providerCapabilities(settings);
+  const detailed = settings.summaryStyle === "detailed";
+  const ctx = pageContext || {};
+  const body = {
+    model: settings.model.trim(),
+    temperature: Math.min(0.3, settings.temperature),
+    max_tokens: Math.min(2000, settings.maxTokens),
+    stream: false,
+    messages: [
+      {
+        role: "system",
+        content: [
+          "你是网页阅读助手，把网页正文提炼成结构化摘要，帮读者快速判断这页讲了什么。",
+          `目标语言：${settings.targetLanguage || "简体中文"}。`,
+          detailed
+            ? "风格：详细。要点可适当展开，保留关键细节、数据、因果与结论。"
+            : "风格：简洁。要点精炼，每条一句话，不展开。",
+          "只基于提供的正文，不编造、不补充正文外的信息；专名、数字、代码、链接保真。",
+          "若正文明显不足或无意义内容，在 summary 里如实说明。",
+          '返回严格 JSON，不要 Markdown、代码围栏或解释。格式：{"summary":"一句话总览","bullets":["要点1","要点2","要点3"],"keyInfo":"关键信息(人/事/数/时/地/结论，没有则空串)"}'
+        ].join("\n")
+      },
+      {
+        role: "user",
+        content: [
+          `网页标题：${ctx.title || "未知"}`,
+          `域名：${ctx.host || "未知"}`,
+          ctx.description ? `页面描述：${ctx.description}` : "",
+          ctx.outline && ctx.outline.length ? `大纲：\n${ctx.outline.slice(0, 16).map((h) => `${h.level || "H"} ${h.text}`).join("\n")}` : "",
+          "",
+          "请总结下面的网页正文：",
+          mainText
+        ].filter(Boolean).join("\n")
+      }
+    ]
+  };
+  if (caps.supportsResponseFormat) body.response_format = { type: "json_object" };
+  if (caps.supportsThinking) {
+    body[caps.thinkingField] = { type: settings.thinkingMode === "enabled" ? "enabled" : "disabled" };
+  }
+  return body;
+}
+
+function buildChatRequestBody(messages, settings) {
+  const caps = providerCapabilities(settings);
+  const body = {
+    model: settings.model.trim(),
+    temperature: Math.min(0.5, settings.temperature),
+    max_tokens: Math.min(2000, settings.maxTokens),
+    stream: false,
+    messages
+  };
+  if (caps.supportsResponseFormat) body.response_format = { type: "json_object" };
+  if (caps.supportsThinking) {
+    body[caps.thinkingField] = { type: settings.thinkingMode === "enabled" ? "enabled" : "disabled" };
+  }
+  return body;
+}
+
+// 宽容解析总结返回:优先 JSON{summary,bullets,keyInfo};模型没守格式时把整段当 summary。
+function parseSummaryPayload(content) {
+  const raw = String(content || "").trim();
+  const stripped = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  try {
+    const parsed = JSON.parse(stripped);
+    const summary = String(parsed?.summary ?? parsed?.tldr ?? parsed?.summary_text ?? "").trim();
+    const bullets = Array.isArray(parsed?.bullets)
+      ? parsed.bullets.map((b) => String(b || "").trim()).filter(Boolean)
+      : Array.isArray(parsed?.points)
+        ? parsed.points.map((b) => String(b || "").trim()).filter(Boolean)
+        : [];
+    const keyInfo = String(parsed?.keyInfo ?? parsed?.key_info ?? "").trim();
+    if (summary || bullets.length || keyInfo) {
+      return { summary: summary || bullets[0] || "", bullets, keyInfo };
+    }
+  } catch {
+    // 落到裸文本兜底
+  }
+  if (!stripped) throw new Error("模型服务返回了空的总结。");
+  return { summary: stripped, bullets: [], keyInfo: "" };
 }
 
 function buildSelectionRequestBody(text, context, settings) {

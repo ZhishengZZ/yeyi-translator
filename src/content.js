@@ -113,6 +113,13 @@
     selectionContext: "",
     selectionRequestId: 0,
     selectionRafId: 0,
+    // AI 网页总结(实验室)
+    summaryEnabled: false,
+    summaryRoot: null,
+    summaryOpen: false,
+    summaryBusy: false,
+    summaryMessages: [],      // 对话历史(含 system/summary/user/assistant)
+    summaryRequestId: 0,
     booting: null
   };
 
@@ -135,6 +142,7 @@
       state.hiddenForHost = matchesHost(location.hostname, settings.neverTranslateHosts);
       setupSearchAssist(settings);
       setupSelectionAssist(settings);
+      state.summaryEnabled = Boolean(settings.labSummary);
     }
     chrome.storage.onChanged?.addListener((changes, area) => {
       if (area !== "local" || !changes["yeyi.settings"]) return;
@@ -151,6 +159,11 @@
       state.selectionEnabled = next.selectionTranslate !== false;
       if (state.selectionEnabled && !state.selectionAssistReady) setupSelectionAssist(state.settings);
       if (!state.selectionEnabled) hideSelectionUI();
+      // 总结助手开关即时生效:关掉时收起侧栏。
+      const prevSummary = state.summaryEnabled;
+      state.summaryEnabled = Boolean(next.labSummary);
+      if (!state.summaryEnabled && state.summaryOpen) closeSummaryPanel();
+      if (!prevSummary && state.summaryEnabled) renderFloatingBall();
       if (prevBall !== next.showFloatingBall) renderFloatingBall();
       // 双语样式即改即生效:已翻译的译块(含 shadow 内)当场换装,无需重新翻译。
       if (next.bilingualStyle && next.bilingualStyle !== prevStyle) applyBilingualStyleLive(next.bilingualStyle);
@@ -196,6 +209,8 @@
         return retryFailedUnits();
       case "YEYI_CONTEXT_REFINE":
         return contextRefinePage();
+      case "YEYI_SUMMARY_OPEN":
+        return openSummaryPanel();
       case "YEYI_TOGGLE":
         return state.active ? restorePage({ disableGlobal: true }) : startTranslation({});
       default:
@@ -1960,6 +1975,7 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
     menu.className = "yeyi-floating-menu";
     menu.dataset.yeyi = "1";
     menu.innerHTML = `
+      <button type="button" data-action="summary" hidden>总结本页</button>
       <button type="button" data-action="retry" hidden>重试失败段</button>
       <button type="button" data-action="context">上下文精翻</button>
       <button type="button" data-action="restore">恢复原文</button>
@@ -1968,6 +1984,7 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
     `;
     menu.addEventListener("click", (event) => {
       const action = event.target?.dataset?.action;
+      if (action === "summary") openSummaryPanel();
       if (action === "retry") retryFailedUnits();
       if (action === "context") contextRefinePage().catch((error) => {
         state.error = error?.message || String(error);
@@ -1985,6 +2002,7 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
     state.floatingMenu = menu;
     state.floatingRetryBtn = menu.querySelector('[data-action="retry"]');
     state.floatingContextBtn = menu.querySelector('[data-action="context"]');
+    state.floatingSummaryBtn = menu.querySelector('[data-action="summary"]');
     updateFloatingBall();
   }
 
@@ -2004,6 +2022,7 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
     const incomplete = state.active && state.totalCount > 0 && state.translatedCount + errorCount < state.totalCount;
     const stateName = state.error || (!working && (errorCount || incomplete)) ? "error" : working ? "working" : state.active ? "done" : "idle";
     if (state.floatingRetryBtn) state.floatingRetryBtn.hidden = !(state.active && errorCount > 0);
+    if (state.floatingSummaryBtn) state.floatingSummaryBtn.hidden = !state.summaryEnabled;
     if (state.floatingContextBtn) {
       state.floatingContextBtn.disabled = state.contextRefining || state.processing;
       state.floatingContextBtn.textContent = state.contextRefining ? "精翻中…" : "上下文精翻";
@@ -2160,5 +2179,286 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
       hash = Math.imul(hash, 16777619);
     }
     return (hash >>> 0).toString(36);
+  }
+
+  // ══════════════════════════ AI 网页总结(实验室) ══════════════════════════
+  // 正文抽取:独立于翻译状态,从整页 DOM 取「用户要读的正文」。
+  // 与翻译的 passesTextFilter 不同:① 不按语言跳过(中文正文要保留)
+  // ② 不做翻译单元分组,只取叶子文本块 ③ 只读不改 DOM。
+  // 黑名单去噪(nav/footer/aside/广告类) + 叶子块白名单 + 段级去噪(短/高链接密度/纯符号)。
+  const SUMMARY_NOISE_ANCESTORS =
+    "nav,header,footer,aside,script,style,noscript,template,form,iframe," +
+    "[role='navigation'],[role='banner'],[role='contentinfo'],[role='search'],[aria-hidden='true']";
+  // 只取叶子文本块,不取 article/section/div(纯容器,文本在内层块里,取了会重复)。
+  const SUMMARY_BLOCK_SELECTOR = "p,li,h1,h2,h3,h4,blockquote,td,pre,dt,dd,figcaption";
+  const SUMMARY_NOISE_CLASS =
+    /(^|[\s_-])(nav|menu|sidebar|footer|header|ad|ads|advert|banner|comment|related|share|breadcrumb|social|promo|widget|cookie|consent|popup|modal)([\s_-]|$)/i;
+  const SUMMARY_PURE_SYMBOLS = /^[\d\s.,:%+\-–—()[\]/\\|#*_~"'`]+$/;
+
+  function collectPageMainText(maxChars) {
+    const limit = Math.max(2000, Math.min(60000, Number(maxChars) || 16000));
+    const root = document.body || document.documentElement;
+    if (!root) return { text: "", truncated: false };
+    const parts = [];
+    let total = 0;
+    let truncated = false;
+    const candidates = root.querySelectorAll(SUMMARY_BLOCK_SELECTOR);
+    for (const el of candidates) {
+      if (truncated) break;
+      if (el.closest(SUMMARY_NOISE_ANCESTORS)) continue;
+      const cls = typeof el.className === "string" ? el.className : "";
+      if (cls && SUMMARY_NOISE_CLASS.test(cls)) continue;
+      const text = normalizeText(el.innerText || el.textContent || "");
+      if (text.length < 15) continue; // 导航碎片
+      if (SUMMARY_PURE_SYMBOLS.test(text)) continue; // 纯数字/符号/URL
+      // 链接文字占比过高 → 多半是导航条,不是正文。
+      const linkText = Array.from(el.querySelectorAll("a"))
+        .reduce((sum, a) => sum + (a.textContent || "").length, 0);
+      if (linkText / text.length > 0.6) continue;
+      // 标题加结构锚点,正文段原样。
+      const tag = el.tagName;
+      const prefix = /^H[1-4]$/.test(tag) ? `\n${"##".repeat(Number(tag[1]))} ` : "";
+      const line = `${prefix}${text}`;
+      if (total + line.length + 1 > limit) {
+        parts.push(line.slice(0, Math.max(0, limit - total - 1)));
+        truncated = true;
+        break;
+      }
+      parts.push(line);
+      total += line.length + 1;
+    }
+    return { text: parts.join("\n").trim(), truncated };
+  }
+
+  // ─── 总结侧栏:打开/关闭/总结/追问 ───
+  // 挂 documentElement(与悬浮球一致,content.css 生效,深浅色走 [data-yeyi-theme])。
+  function summaryRootEl() {
+    if (state.summaryRoot?.isConnected) return state.summaryRoot;
+    const root = document.createElement("div");
+    root.className = `${NOTRANSLATE_CLASS} yeyi-summary-root`;
+    root.dataset.yeyi = "1";
+    root.dataset.state = "closed";
+    root.innerHTML = `
+      <aside class="yeyi-summary-panel" role="dialog" aria-label="AI 网页总结">
+        <header class="yeyi-summary-head">
+          <div class="yeyi-summary-title">
+            <span class="yeyi-summary-mark">译</span>
+            <span>AI 网页总结</span>
+          </div>
+          <button type="button" class="yeyi-summary-close" data-action="close" aria-label="关闭">✕</button>
+        </header>
+        <div class="yeyi-summary-body" id="yeyiSummaryBody"></div>
+        <footer class="yeyi-summary-foot">
+          <textarea class="yeyi-summary-input" id="yeyiSummaryInput" rows="1"
+            placeholder="就这页内容追问，回车发送（Shift+回车换行）"></textarea>
+          <button type="button" class="yeyi-summary-send" data-action="send" aria-label="发送">发送</button>
+        </footer>
+      </aside>
+      <div class="yeyi-summary-scrim" data-action="close"></div>
+    `;
+    document.documentElement.append(root);
+    state.summaryRoot = root;
+    root.addEventListener("click", (event) => {
+      const action = event.target?.dataset?.action;
+      if (action === "close") closeSummaryPanel();
+      else if (action === "send") sendSummaryChat();
+    });
+    const input = root.querySelector("#yeyiSummaryInput");
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendSummaryChat();
+      }
+    });
+    input.addEventListener("input", () => {
+      input.style.height = "auto";
+      input.style.height = `${Math.min(120, input.scrollHeight)}px`;
+    });
+    return root;
+  }
+
+  function openSummaryPanel() {
+    if (!state.summaryEnabled) return { opened: false };
+    const root = summaryRootEl();
+    state.summaryOpen = true;
+    root.dataset.state = "open";
+    updatePageTheme();
+    root.dataset.theme = document.documentElement.dataset.yeyiTheme || "light";
+    // 首次打开自动跑一次总结。
+    if (state.summaryMessages.length === 0) {
+      runSummary();
+    } else {
+      renderSummaryMessages();
+    }
+    setTimeout(() => root.querySelector("#yeyiSummaryInput")?.focus(), 50);
+    return { opened: true };
+  }
+
+  function closeSummaryPanel() {
+    if (!state.summaryRoot) return;
+    state.summaryOpen = false;
+    state.summaryRoot.dataset.state = "closed";
+    state.summaryRequestId += 1; // 令 in-flight 请求的结果作废
+  }
+
+  async function runSummary() {
+    const body = state.summaryRoot?.querySelector("#yeyiSummaryBody");
+    if (!body) return;
+    state.summaryBusy = true;
+    const maxChars = Number(state.settings?.summaryMaxChars) || 16000;
+    const { text, truncated } = collectPageMainText(maxChars);
+    if (text.length < 80) {
+      renderSummaryError(body, "当前页面没有足够正文可总结（可能是导航/登录/纯图页）。");
+      state.summaryBusy = false;
+      return;
+    }
+    const ctx = pageContext();
+    renderSummaryLoading(body, "正在阅读页面并总结…");
+    const requestId = state.summaryRequestId;
+    try {
+      const result = await sendRuntimeMessage({
+        type: "YEYI_SUMMARIZE",
+        mainText: text,
+        pageContext: ctx
+      });
+      if (requestId !== state.summaryRequestId || !state.summaryOpen) return;
+      // system 上下文保留正文,供后续追问引用。
+      state.summaryMessages = [
+        {
+          role: "system",
+          content: `你是网页阅读助手。以下是用户正在阅读的网页正文，追问时只基于它回答。\n标题：${ctx.title || ""}\n域名：${ctx.host || ""}\n\n${text}`
+        },
+        {
+          role: "assistant",
+          content: formatSummaryAsText(result)
+        }
+      ];
+      renderSummaryResult(body, result);
+    } catch (error) {
+      if (requestId !== state.summaryRequestId || !state.summaryOpen) return;
+      renderSummaryError(body, error?.message || String(error));
+    } finally {
+      state.summaryBusy = false;
+    }
+  }
+
+  async function sendSummaryChat() {
+    if (!state.summaryOpen || state.summaryBusy) return;
+    const input = state.summaryRoot?.querySelector("#yeyiSummaryInput");
+    const text = String(input?.value || "").trim();
+    if (!text) return;
+    input.value = "";
+    input.style.height = "auto";
+    state.summaryMessages.push({ role: "user", content: text });
+    renderSummaryMessages();
+    state.summaryBusy = true;
+    const requestId = state.summaryRequestId;
+    try {
+      const result = await sendRuntimeMessage({
+        type: "YEYI_CHAT",
+        messages: state.summaryMessages.slice(-16)
+      });
+      if (requestId !== state.summaryRequestId || !state.summaryOpen) return;
+      state.summaryMessages.push({ role: "assistant", content: result.text });
+      state.summaryBusy = false;
+      renderSummaryMessages();
+    } catch (error) {
+      if (requestId !== state.summaryRequestId || !state.summaryOpen) return;
+      // 失败把用户那条标红,不入 assistant 消息。
+      state.summaryMessages.push({ role: "assistant", content: `（出错：${error?.message || String(error)}）`, error: true });
+      state.summaryBusy = false;
+      renderSummaryMessages();
+    } finally {
+      state.summaryBusy = false;
+    }
+  }
+
+  function formatSummaryAsText(result) {
+    const lines = [];
+    if (result.summary) lines.push(result.summary);
+    if (Array.isArray(result.bullets) && result.bullets.length) {
+      lines.push(...result.bullets.map((b) => `• ${b}`));
+    }
+    if (result.keyInfo) lines.push(result.keyInfo);
+    return lines.join("\n");
+  }
+
+  function renderSummaryMessages() {
+    const body = state.summaryRoot?.querySelector("#yeyiSummaryBody");
+    if (!body) return;
+    body.replaceChildren();
+    for (const msg of state.summaryMessages) {
+      if (msg.role === "system") continue;
+      const turn = document.createElement("div");
+      turn.className = `yeyi-summary-turn yeyi-summary-${msg.role}`;
+      if (msg.error) turn.dataset.error = "true";
+      const label = document.createElement("div");
+      label.className = "yeyi-summary-turn-label";
+      label.textContent = msg.role === "user" ? "你" : "AI";
+      const content = document.createElement("div");
+      content.className = "yeyi-summary-turn-text";
+      content.textContent = msg.content;
+      turn.append(label, content);
+      body.append(turn);
+    }
+    if (state.summaryBusy) {
+      const loading = document.createElement("div");
+      loading.className = "yeyi-summary-loading";
+      loading.innerHTML = '<span class="yeyi-dot"></span><span class="yeyi-dot"></span><span class="yeyi-dot"></span>';
+      body.append(loading);
+    }
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function renderSummaryResult(body, result) {
+    body.replaceChildren();
+    const card = document.createElement("div");
+    card.className = "yeyi-summary-result";
+    if (result.summary) {
+      const h = document.createElement("div");
+      h.className = "yeyi-summary-result-tldr";
+      h.textContent = result.summary;
+      card.append(h);
+    }
+    if (Array.isArray(result.bullets) && result.bullets.length) {
+      const ul = document.createElement("ul");
+      ul.className = "yeyi-summary-result-bullets";
+      for (const b of result.bullets) {
+        const li = document.createElement("li");
+        li.textContent = b;
+        ul.append(li);
+      }
+      card.append(ul);
+    }
+    if (result.keyInfo) {
+      const info = document.createElement("div");
+      info.className = "yeyi-summary-result-keyinfo";
+      info.textContent = result.keyInfo;
+      card.append(info);
+    }
+    if (result.truncatedNote) {
+      const note = document.createElement("div");
+      note.className = "yeyi-summary-result-note";
+      note.textContent = result.truncatedNote;
+      card.append(note);
+    }
+    body.append(card);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function renderSummaryLoading(body, text) {
+    body.replaceChildren();
+    const loading = document.createElement("div");
+    loading.className = "yeyi-summary-loading yeyi-summary-loading-text";
+    loading.textContent = text;
+    body.append(loading);
+  }
+
+  function renderSummaryError(body, message) {
+    body.replaceChildren();
+    const err = document.createElement("div");
+    err.className = "yeyi-summary-error";
+    err.textContent = message;
+    body.append(err);
   }
 })();

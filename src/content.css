@@ -547,3 +547,274 @@ h6 .yeyi-translation {
 :root[data-yeyi-theme="dark"] .yeyi-selection-actions button { color: #8ab4f8; }
 
 :root[data-yeyi-theme="dark"] .yeyi-selection-actions button:hover { background: rgba(138, 180, 248, 0.18); }
+
+/* ===== AI 网页总结侧栏（实验室） — Chrome Settings 原生风格 ===== */
+
+.yeyi-summary-root {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  pointer-events: none;
+  font-family: Roboto, 'Segoe UI', Arial, 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
+}
+
+.yeyi-summary-scrim {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  opacity: 0;
+  transition: opacity 200ms cubic-bezier(0.2, 0, 0, 1);
+  pointer-events: none;
+}
+
+.yeyi-summary-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 420px;
+  max-width: 92vw;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-left: 1px solid #dadce0;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15), 0 8px 24px rgba(60, 64, 67, 0.12);
+  transform: translateX(100%);
+  transition: transform 220ms cubic-bezier(0.2, 0, 0, 1);
+  pointer-events: auto;
+  color: #202124;
+}
+
+.yeyi-summary-root[data-state="open"] .yeyi-summary-panel { transform: translateX(0); }
+.yeyi-summary-root[data-state="open"] .yeyi-summary-scrim {
+  opacity: 1;
+  pointer-events: auto;
+  background: rgba(32, 33, 36, 0.32);
+}
+
+.yeyi-summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e8eaed;
+}
+
+.yeyi-summary-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #202124;
+}
+
+.yeyi-summary-mark {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #1a73e8;
+  color: #fff;
+  font: 500 13px/1 Roboto, 'Segoe UI', Arial, 'Microsoft YaHei UI', sans-serif;
+}
+
+.yeyi-summary-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #5f6368;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 100ms cubic-bezier(0.2, 0, 0, 1);
+}
+.yeyi-summary-close:hover { background: #f1f3f4; color: #202124; }
+
+.yeyi-summary-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.yeyi-summary-result {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #e8eaed;
+  border-radius: 12px;
+  background: #f8fafd;
+}
+.yeyi-summary-result-tldr {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: #202124;
+}
+.yeyi-summary-result-bullets {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #3c4043;
+}
+.yeyi-summary-result-keyinfo {
+  font-size: 12px;
+  color: #5f6368;
+  padding-top: 6px;
+  border-top: 1px solid #e8eaed;
+  line-height: 1.5;
+}
+.yeyi-summary-result-note {
+  font-size: 11px;
+  color: #9aa0a6;
+}
+
+.yeyi-summary-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 100%;
+}
+.yeyi-summary-turn-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #5f6368;
+}
+.yeyi-summary-turn-text {
+  font-size: 13px;
+  line-height: 1.55;
+  padding: 10px 12px;
+  border-radius: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.yeyi-summary-assistant .yeyi-summary-turn-text {
+  background: #f1f3f4;
+  color: #202124;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+.yeyi-summary-user .yeyi-summary-turn-text {
+  background: #1a73e8;
+  color: #fff;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  max-width: 88%;
+}
+.yeyi-summary-turn[data-error="true"] .yeyi-summary-turn-text {
+  background: #fce8e6;
+  color: #d93025;
+}
+
+.yeyi-summary-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 0;
+}
+.yeyi-summary-loading-text {
+  font-size: 13px;
+  color: #5f6368;
+}
+.yeyi-summary-loading .yeyi-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #5f6368;
+  animation: yeyiDotPulse 900ms ease-in-out infinite;
+}
+.yeyi-summary-loading .yeyi-dot:nth-child(2) { animation-delay: 140ms; }
+.yeyi-summary-loading .yeyi-dot:nth-child(3) { animation-delay: 280ms; }
+
+.yeyi-summary-error {
+  font-size: 13px;
+  color: #d93025;
+  padding: 10px 12px;
+  background: #fce8e6;
+  border-radius: 8px;
+}
+
+.yeyi-summary-foot {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #e8eaed;
+}
+.yeyi-summary-input {
+  flex: 1;
+  resize: none;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font: 13px/1.45 Roboto, 'Segoe UI', Arial, 'Microsoft YaHei UI', sans-serif;
+  color: #202124;
+  background: #fff;
+  outline: none;
+  transition: border-color 100ms cubic-bezier(0.2, 0, 0, 1);
+  max-height: 120px;
+}
+.yeyi-summary-input:focus { border-color: #1a73e8; }
+.yeyi-summary-send {
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  background: #1a73e8;
+  color: #fff;
+  cursor: pointer;
+  font: 500 13px/1 Roboto, 'Segoe UI', Arial, 'Microsoft YaHei UI', sans-serif;
+  transition: background 100ms cubic-bezier(0.2, 0, 0, 1);
+}
+.yeyi-summary-send:hover { background: #185abc; }
+
+@media (max-width: 520px) {
+  .yeyi-summary-panel { width: 100vw; }
+}
+
+/* 暗色主题 */
+:root[data-yeyi-theme="dark"] .yeyi-summary-panel {
+  background: #303134;
+  border-left-color: #5f6368;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.3);
+  color: #e8eaed;
+}
+:root[data-yeyi-theme="dark"] .yeyi-summary-head { border-bottom-color: #3c4043; }
+:root[data-yeyi-theme="dark"] .yeyi-summary-title { color: #e8eaed; }
+:root[data-yeyi-theme="dark"] .yeyi-summary-close { color: #9aa0a6; }
+:root[data-yeyi-theme="dark"] .yeyi-summary-close:hover { background: #3c4043; color: #e8eaed; }
+:root[data-yeyi-theme="dark"] .yeyi-summary-body { }
+:root[data-yeyi-theme="dark"] .yeyi-summary-result {
+  background: #292a2d;
+  border-color: #3c4043;
+}
+:root[data-yeyi-theme="dark"] .yeyi-summary-result-tldr { color: #e8eaed; }
+:root[data-yeyi-theme="dark"] .yeyi-summary-result-bullets { color: #bdc1c6; }
+:root[data-yeyi-theme="dark"] .yeyi-summary-result-keyinfo { color: #9aa0a6; border-top-color: #3c4043; }
+:root[data-yeyi-theme="dark"] .yeyi-summary-turn-label { color: #9aa0a6; }
+:root[data-yeyi-theme="dark"] .yeyi-summary-assistant .yeyi-summary-turn-text { background: #3c4043; color: #e8eaed; }
+:root[data-yeyi-theme="dark"] .yeyi-summary-loading-text,
+:root[data-yeyi-theme="dark"] .yeyi-summary-loading .yeyi-dot { color: #9aa0a6; background: #9aa0a6; }
+:root[data-yeyi-theme="dark"] .yeyi-summary-loading-text { background: transparent; }
+:root[data-yeyi-theme="dark"] .yeyi-summary-error { background: #3c1f1e; color: #f28b82; }
+:root[data-yeyi-theme="dark"] .yeyi-summary-foot { border-top-color: #3c4043; }
+:root[data-yeyi-theme="dark"] .yeyi-summary-input { background: #202124; border-color: #5f6368; color: #e8eaed; }
+:root[data-yeyi-theme="dark"] .yeyi-summary-input:focus { border-color: #8ab4f8; }
+
+@media (prefers-reduced-motion: reduce) {
+  .yeyi-summary-panel,
+  .yeyi-summary-scrim,
+  .yeyi-summary-loading .yeyi-dot { animation: none; transition: none; }
+  .yeyi-summary-root[data-state="open"] .yeyi-summary-panel { transform: none; }
+}
+

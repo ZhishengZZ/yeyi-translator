@@ -26,6 +26,8 @@ let chromeExit = null;
 const providerRequests = [];
 const searchRequests = [];
 const contextRequests = [];
+const summaryRequests = [];
+const chatRequests = [];
 
 try {
   if (existsSync(profileDir)) rmSync(profileDir, { recursive: true, force: true });
@@ -81,7 +83,9 @@ try {
         searchBoxTranslate: true,
         searchBoxTranslateMode: "suggest",
         alwaysTranslateHosts: [],
-        neverTranslateHosts: []
+        neverTranslateHosts: [],
+        labSummary: true,
+        enableNewTabOverride: true
       }
     })
   `);
@@ -268,7 +272,7 @@ try {
     buttonText: document.querySelector('#disableOverride')?.textContent || "",
     omniHidden: document.querySelector('#omni')?.hidden === true
   })`);
-  assert(suggestionOff.buttonText.includes("显示建议"), "newtab suggestion toggle did not switch off");
+  assert(suggestionOff.buttonText.includes("显示雅译增强"), "newtab suggestion toggle did not switch off");
   assert(suggestionOff.omniHidden, "newtab suggestion remained visible after hiding suggestions");
 
   const ntp = await evaluate(newtabPage, `({
@@ -284,6 +288,56 @@ try {
   assert(ntp.hasChromeSettingsShell && ntp.hasSettingsCards, "newtab is not using the Chrome Settings-style shell/cards");
   assert(ntp.hasSearch && ntp.hasMic && ntp.hasLens, "newtab search capsule / mic / lens buttons missing");
   assert(!ntp.hasSubmitArrow, "newtab should not keep the old blue submit-arrow button");
+
+  // AI 网页总结(实验室):点悬浮球菜单「总结本页」→ 自动总结 → 追问一条。
+  const summaryBtnVisible = await evaluate(page, `
+    const btn = document.querySelector('.yeyi-floating-menu [data-action="summary"]');
+    !!btn && btn.hidden === false
+  `);
+  assert(summaryBtnVisible, "summary menu button should be visible when labSummary is on");
+
+  await evaluate(page, `document.querySelector('.yeyi-floating-menu [data-action="summary"]').click()`);
+  await waitForCondition(page, () => `
+    document.querySelector('.yeyi-summary-root[data-state="open"]') &&
+    (document.querySelector('.yeyi-summary-result-tldr')?.textContent || '').includes('[sum]')
+  `);
+  const summaryResult = await evaluate(page, `({
+    tldr: document.querySelector('.yeyi-summary-result-tldr')?.textContent || "",
+    bullets: Array.from(document.querySelectorAll('.yeyi-summary-result-bullets li')).map((li) => li.textContent || ""),
+    keyInfo: document.querySelector('.yeyi-summary-result-keyinfo')?.textContent || ""
+  })`);
+  assert(summaryResult.tldr.includes("[sum]"), "summary TL;DR was not rendered");
+  assert(summaryResult.bullets.length >= 2, "summary bullets were not rendered");
+  assert(summaryResult.keyInfo.includes("[sum]"), "summary key info was not rendered");
+  assert(summaryRequests.length > 0, "summary did not call the provider");
+
+  // 追问一条:填输入框 → 点发送 → 等 AI 回答出现。
+  await evaluate(page, `
+    const input = document.querySelector('#yeyiSummaryInput');
+    input.value = '第三点展开讲讲';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  `);
+  await evaluate(page, `document.querySelector('.yeyi-summary-send').click()`);
+  await waitForCondition(page, () => `
+    (function () {
+      const turns = document.querySelectorAll('.yeyi-summary-assistant');
+      return turns.length >= 1 && (turns[turns.length - 1].textContent || '').includes('[chat]');
+    })()
+  `);
+  const chatTurns = await evaluate(page, `({
+    userCount: document.querySelectorAll('.yeyi-summary-user').length,
+    assistantText: document.querySelector('.yeyi-summary-assistant:last-of-type .yeyi-summary-turn-text')?.textContent || ""
+  })`);
+  assert(chatTurns.userCount >= 1, "chat user turn was not rendered");
+  assert(chatTurns.assistantText.includes("[chat]"), "chat assistant reply was not rendered");
+  assert(chatRequests.length > 0, "chat did not call the provider");
+
+  await evaluate(page, `document.querySelector('.yeyi-summary-close').click()`);
+  await delay(300);
+  const summaryClosed = await evaluate(page, `
+    document.querySelector('.yeyi-summary-root')?.dataset.state !== 'open'
+  `);
+  assert(summaryClosed, "summary panel did not close");
 
   const stats = await evaluate(extensionPage, `
     chrome.storage.local.get("yeyi.stats").then((value) => value["yeyi.stats"])
@@ -301,9 +355,13 @@ try {
     restored,
     afterCancel,
     ntp,
+    summaryResult,
+    chatTurns,
     providerRequests,
     contextRequests,
     searchRequests,
+    summaryRequests: summaryRequests.length,
+    chatRequests: chatRequests.length,
     stats: stats.total
   }, null, 2));
 } finally {
@@ -404,6 +462,31 @@ function serveProvider(port) {
       response.end(JSON.stringify({
         choices: [{ message: { content: JSON.stringify({ text: "AI development trends" }) } }],
         usage: { prompt_tokens: 12, completion_tokens: 4, total_tokens: 16 }
+      }));
+      return;
+    }
+    // AI 总结请求:正文采集后单次调用,返回结构化摘要。
+    if (userMessage.includes("请总结下面的网页正文：")) {
+      summaryRequests.push(userMessage);
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({
+        choices: [{ message: { content: JSON.stringify({
+          summary: "[sum] 这是一篇关于烟雾测试的示例文章摘要",
+          bullets: ["[sum] 要点一：覆盖正文抽取", "[sum] 要点二：结构化输出", "[sum] 要点三：可追问"],
+          keyInfo: "[sum] 来源：smoke test-page"
+        }) } }],
+        usage: { prompt_tokens: 60, completion_tokens: 30, total_tokens: 90 }
+      }));
+      return;
+    }
+    // 对话追问:messages 透传,system 含"网页阅读助手"。返回纯文本(callChatApi 不解析 JSON)。
+    const isChat = parsed.messages.some((m) => m.role === "system" && String(m.content || "").includes("网页阅读助手"));
+    if (isChat) {
+      chatRequests.push(userMessage);
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({
+        choices: [{ message: { content: "[chat] 基于页面内容的回答" } }],
+        usage: { prompt_tokens: 40, completion_tokens: 12, total_tokens: 52 }
       }));
       return;
     }
