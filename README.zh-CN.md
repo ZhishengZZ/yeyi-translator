@@ -7,7 +7,7 @@
 **网页翻译，交给你自己的模型 —— 自带 Key、原地读全文、还讲究信达雅。**
 
 [![License](https://img.shields.io/badge/许可证-GPLv3-4c8eda?style=flat-square)](./LICENSE)
-[![Release](https://img.shields.io/badge/版本-0.6.0-f0883e?style=flat-square)](https://github.com/ZhishengZZ/yeyi-translator/releases)
+[![Release](https://img.shields.io/badge/版本-0.7.0-f0883e?style=flat-square)](https://github.com/ZhishengZZ/yeyi-translator/releases)
 [![Chrome MV3](https://img.shields.io/badge/Chrome-Manifest%20V3-3fb950?style=flat-square)](#-安装)
 [![Dependencies](https://img.shields.io/badge/依赖-零-8957e5?style=flat-square)](#)
 
@@ -83,4 +83,4 @@ agent = 智能体
 
 ## 🧪 版本状态
 
-**0.6.0** —— 日常阅读已相当完备（iframe 与 Shadow DOM 内翻译、站点规则、划词即译），但仍属 1.0 前版本。欢迎提 Issue 和 PR。
+**0.7.0** —— 日常阅读已相当完备（iframe 与 Shadow DOM 内翻译、站点规则、划词即译），并新增可选的新标签页跨语言搜索与实验室 AI 网页总结助手。仍属 1.0 前版本。欢迎提 Issue 和 PR。

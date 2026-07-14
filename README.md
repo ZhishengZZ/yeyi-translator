@@ -7,7 +7,7 @@
 **AI webpage translation you actually control — bring your own key, read anything, in your own words.**
 
 [![License](https://img.shields.io/badge/License-GPLv3-4c8eda?style=flat-square)](./LICENSE)
-[![Release](https://img.shields.io/badge/release-0.6.0-f0883e?style=flat-square)](https://github.com/ZhishengZZ/yeyi-translator/releases)
+[![Release](https://img.shields.io/badge/release-0.7.0-f0883e?style=flat-square)](https://github.com/ZhishengZZ/yeyi-translator/releases)
 [![Chrome MV3](https://img.shields.io/badge/Chrome-Manifest%20V3-3fb950?style=flat-square)](#-install)
 [![Dependencies](https://img.shields.io/badge/dependencies-zero-8957e5?style=flat-square)](#)
 
@@ -83,4 +83,4 @@ Big thanks to **[@mengxi-ream](https://github.com/mengxi-ream)** and the Read Fr
 
 ## 🧪 Status
 
-**0.6.0** — feature-rich for everyday reading (translation inside iframes & Shadow DOM, per-site rules, select-to-translate), still pre-1.0. Issues and PRs welcome.
+**0.7.0** — feature-rich for everyday reading (translation inside iframes & Shadow DOM, per-site rules, select-to-translate), plus opt-in new-tab cross-language search and a Labs AI page-summarizer. Still pre-1.0. Issues and PRs welcome.
