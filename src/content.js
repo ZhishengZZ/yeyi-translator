@@ -1963,56 +1963,90 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
     button.title = "雅译：点击翻译当前页面";
     button.setAttribute("aria-label", "雅译：点击翻译当前页面");
     button.innerHTML = '<span class="yeyi-ball-text">译</span><span class="yeyi-ball-ring"></span>';
-    button.addEventListener("click", () => {
-      if (state.active) restorePage({ keepFloating: true, disableGlobal: true });
-      else startTranslation({}).catch((error) => {
-        state.error = error?.message || String(error);
-        renderStatus();
-      });
+    button.addEventListener("click", (event) => {
+      // 点球切菜单开/关。菜单里第一项是主操作(翻译/恢复),一键路径不变。
+      event.stopPropagation();
+      toggleFloatingMenu();
     });
 
     const menu = document.createElement("div");
     menu.className = "yeyi-floating-menu";
     menu.dataset.yeyi = "1";
     menu.innerHTML = `
+      <button type="button" data-action="main">翻译此页</button>
       <button type="button" data-action="summary" hidden>总结本页</button>
       <button type="button" data-action="retry" hidden>重试失败段</button>
       <button type="button" data-action="context">上下文精翻</button>
-      <button type="button" data-action="restore">恢复原文</button>
       <button type="button" data-action="mode">双语⇋替换</button>
       <button type="button" data-action="hide">隐藏本站悬浮球</button>
     `;
     menu.addEventListener("click", (event) => {
       const action = event.target?.dataset?.action;
+      if (!action) return;
+      closeFloatingMenu();
+      if (action === "main") {
+        if (state.active) restorePage({ keepFloating: true, disableGlobal: true });
+        else startTranslation({}).catch((error) => {
+          state.error = error?.message || String(error);
+          renderStatus();
+        });
+      }
       if (action === "summary") openSummaryPanel();
       if (action === "retry") retryFailedUnits();
       if (action === "context") contextRefinePage().catch((error) => {
         state.error = error?.message || String(error);
         renderStatus();
       });
-      if (action === "restore") restorePage({ keepFloating: true, disableGlobal: true });
       if (action === "mode") restartWithMode(state.mode === "bilingual" ? "replace" : "bilingual");
       if (action === "hide") hideFloatingForHost();
     });
 
     root.append(menu, button);
     document.documentElement.append(root);
+    // 点悬浮球以外的地方收起菜单。
+    state.floatingOutsideHandler = (event) => {
+      if (!state.floatingRoot?.contains(event.target)) closeFloatingMenu();
+    };
+    document.addEventListener("click", state.floatingOutsideHandler, true);
     state.floatingRoot = root;
     state.floatingButton = button;
     state.floatingMenu = menu;
     state.floatingRetryBtn = menu.querySelector('[data-action="retry"]');
     state.floatingContextBtn = menu.querySelector('[data-action="context"]');
     state.floatingSummaryBtn = menu.querySelector('[data-action="summary"]');
+    state.floatingMainBtn = menu.querySelector('[data-action="main"]');
     updateFloatingBall();
   }
 
   function removeFloatingBall() {
+    if (state.floatingOutsideHandler) {
+      document.removeEventListener("click", state.floatingOutsideHandler, true);
+      state.floatingOutsideHandler = null;
+    }
     if (state.floatingRoot?.isConnected) state.floatingRoot.remove();
     state.floatingRoot = null;
     state.floatingButton = null;
     state.floatingMenu = null;
     state.floatingRetryBtn = null;
     state.floatingContextBtn = null;
+    state.floatingMainBtn = null;
+  }
+
+  function toggleFloatingMenu() {
+    if (!state.floatingRoot) return;
+    const open = state.floatingRoot.dataset.menuOpen === "true";
+    if (open) closeFloatingMenu();
+    else openFloatingMenu();
+  }
+
+  function openFloatingMenu() {
+    if (!state.floatingRoot) return;
+    state.floatingRoot.dataset.menuOpen = "true";
+  }
+
+  function closeFloatingMenu() {
+    if (!state.floatingRoot) return;
+    state.floatingRoot.dataset.menuOpen = "false";
   }
 
   function updateFloatingBall() {
@@ -2027,9 +2061,13 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
       state.floatingContextBtn.disabled = state.contextRefining || state.processing;
       state.floatingContextBtn.textContent = state.contextRefining ? "精翻中…" : "上下文精翻";
     }
+    // 主操作项文案跟随状态:翻译中→恢复原文,否则→翻译此页。
+    if (state.floatingMainBtn) {
+      state.floatingMainBtn.textContent = state.active ? "恢复原文" : "翻译此页";
+    }
     state.floatingButton.dataset.state = stateName;
     state.floatingButton.querySelector(".yeyi-ball-text").textContent = state.contextRefining ? "精" : state.active ? "原" : "译";
-    const title = state.contextRefining ? "雅译：正在上下文精翻" : state.active ? "雅译：点击恢复原文" : "雅译：点击翻译当前页面";
+    const title = state.contextRefining ? "雅译：正在上下文精翻" : "点击打开菜单";
     state.floatingButton.title = title;
     state.floatingButton.setAttribute("aria-label", title);
   }
