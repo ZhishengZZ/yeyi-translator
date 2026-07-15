@@ -2079,8 +2079,18 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
   }
 
   function updatePageTheme() {
-    const style = window.getComputedStyle(document.body || document.documentElement);
-    document.documentElement.dataset.yeyiTheme = isDarkColor(style.backgroundColor) ? "dark" : "light";
+    // body 与 html 都看:很多站点 body 透明而 html 深色(或反之),取两者中较暗者更贴合视觉。
+    const bodyStyle = window.getComputedStyle(document.body || document.documentElement);
+    const htmlStyle = window.getComputedStyle(document.documentElement);
+    const dark = isDarkColor(bodyStyle.backgroundColor) || isDarkColor(htmlStyle.backgroundColor);
+    const theme = dark ? "dark" : "light";
+    if (document.documentElement.dataset.yeyiTheme !== theme) {
+      document.documentElement.dataset.yeyiTheme = theme;
+    }
+    // 总结侧栏打开期间跟随主题变化(滚动到深色区时面板一起切)。
+    if (state.summaryRoot && state.summaryOpen) {
+      state.summaryRoot.dataset.theme = theme;
+    }
   }
 
   function isDarkColor(color) {
@@ -2285,6 +2295,12 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
     root.dataset.state = "open";
     updatePageTheme();
     root.dataset.theme = document.documentElement.dataset.yeyiTheme || "light";
+    // 打开期间跟随页面滚动/resize 刷新深浅色(滚到深色区面板一起切)。
+    if (!state.summaryThemeHandler) {
+      state.summaryThemeHandler = () => updatePageTheme();
+      window.addEventListener("scroll", state.summaryThemeHandler, { passive: true, capture: true });
+      window.addEventListener("resize", state.summaryThemeHandler, { passive: true });
+    }
     // 首次打开自动跑一次总结。
     if (state.summaryMessages.length === 0) {
       runSummary();
@@ -2300,6 +2316,11 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
     state.summaryOpen = false;
     state.summaryRoot.dataset.state = "closed";
     state.summaryRequestId += 1; // 令 in-flight 请求的结果作废
+    if (state.summaryThemeHandler) {
+      window.removeEventListener("scroll", state.summaryThemeHandler, { capture: true });
+      window.removeEventListener("resize", state.summaryThemeHandler);
+      state.summaryThemeHandler = null;
+    }
   }
 
   async function runSummary() {

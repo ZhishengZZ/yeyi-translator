@@ -209,13 +209,11 @@ h6 .yeyi-translation {
 /* ===== 悬浮菜单 ===== */
 
 .yeyi-floating-menu {
+  position: relative;
   display: grid;
   gap: 2px;
   width: 160px;
-  /* 向下延伸吃掉与悬浮球之间的 8px gap,作不可见桥接区:鼠标从球移到菜单时
-     不再穿过空白导致 :hover 失效、菜单缩回。padding 撑出可悬停区域,背景透明不露。 */
-  margin-bottom: -8px;
-  padding: 6px 6px 14px;
+  padding: 6px;
   border: 1px solid rgba(218, 220, 224, 0.6);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.98);
@@ -224,6 +222,21 @@ h6 .yeyi-translation {
   pointer-events: none;
   transform: translateX(8px) translateY(4px);
   transition: opacity 160ms cubic-bezier(0.05, 0.7, 0.1, 1), transform 160ms cubic-bezier(0.05, 0.7, 0.1, 1);
+}
+
+/* 桥接区(CSS-Tricks「forgiving mouse paths」):菜单与悬浮球之间有间隙且水平错位,
+   鼠标斜向上移到菜单时会先脱离 :hover 导致菜单缩回。用伪元素从菜单底边向下延伸到
+   越过悬浮球,覆盖整条移动通道——鼠标经过伪元素时仍算在菜单(及 root)hover 范围内,
+   菜单不收起。伪元素透明不可见,不影响视觉。 */
+.yeyi-floating-menu::after {
+  content: "";
+  position: absolute;
+  /* 菜单右贴边、球在菜单右下外侧 8px 处。伪元素从菜单底部向下延伸到球的中部,
+     宽度覆盖到球,保证斜向移动路径全程在 hover 区内。 */
+  left: 0;
+  right: 0;
+  bottom: -52px;
+  height: 52px;
 }
 
 .yeyi-floating-root:hover .yeyi-floating-menu,
