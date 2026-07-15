@@ -121,10 +121,7 @@ try {
   assert(searchAssist.value === "AI development trends", "search box Chinese-to-English suggestion was not filled");
   assert(!searchAssist.panelExists, "search suggestion panel remained after fill");
 
-  await evaluate(page, `
-    document.querySelector('.yeyi-floating-ball').click();
-    document.querySelector('.yeyi-floating-menu [data-action="main"]').click();
-  `);
+  await evaluate(page, `document.querySelector('.yeyi-floating-ball').click()`);
 
   await waitForCondition(page, () => `
     document.querySelectorAll('.yeyi-translation').length >= 4 &&
@@ -170,10 +167,7 @@ try {
     "Chinese paragraph was sent to provider"
   );
 
-  await evaluate(page, `
-    document.querySelector('.yeyi-floating-ball').click();
-    document.querySelector('.yeyi-floating-menu [data-action="context"]').click();
-  `);
+  await evaluate(page, `document.querySelector('.yeyi-floating-menu [data-action="context"]').click()`);
   await waitForCondition(page, () => `
     (document.body.innerText || "").includes('[context]') &&
     (document.querySelector('h1')?.innerText || '').includes('[context]')
@@ -218,10 +212,7 @@ try {
   assert(autoTranslated.translationBlocks >= 4, "global floating-ball translate state did not continue on next page");
   await delay(2800);
 
-  await evaluate(page, `
-    document.querySelector('.yeyi-floating-ball').click();
-    document.querySelector('.yeyi-floating-menu [data-action="main"]').click();
-  `);
+  await evaluate(page, `document.querySelector('.yeyi-floating-ball').click()`);
 
   await waitForCondition(page, () => `
     document.querySelectorAll('.yeyi-translation').length === 0 &&
@@ -305,10 +296,7 @@ try {
   `);
   assert(summaryBtnVisible, "summary menu button should be visible when labSummary is on");
 
-  await evaluate(page, `
-    document.querySelector('.yeyi-floating-ball').click();
-    document.querySelector('.yeyi-floating-menu [data-action="summary"]').click();
-  `);
+  await evaluate(page, `document.querySelector('.yeyi-floating-menu [data-action="summary"]').click()`);
   await waitForCondition(page, () => `
     document.querySelector('.yeyi-summary-root[data-state="open"]') &&
     (document.querySelector('.yeyi-summary-result-tldr')?.textContent || '').includes('[sum]')
