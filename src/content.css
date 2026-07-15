@@ -224,19 +224,18 @@ h6 .yeyi-translation {
   transition: opacity 160ms cubic-bezier(0.05, 0.7, 0.1, 1), transform 160ms cubic-bezier(0.05, 0.7, 0.1, 1);
 }
 
-/* 桥接区(CSS-Tricks「forgiving mouse paths」):菜单与悬浮球之间有间隙且水平错位,
-   鼠标斜向上移到菜单时会先脱离 :hover 导致菜单缩回。用伪元素从菜单底边向下延伸到
-   越过悬浮球,覆盖整条移动通道——鼠标经过伪元素时仍算在菜单(及 root)hover 范围内,
-   菜单不收起。伪元素透明不可见,不影响视觉。 */
+/* 桥接区(CSS-Tricks「forgiving mouse paths」):菜单与悬浮球之间有 8px 间隙,
+   鼠标从球移到菜单时若穿过空白会脱离 :hover 导致菜单缩回。用伪元素从菜单底边
+   向下延伸补上这段间隙,鼠标经过时仍算在菜单(及 root)hover 范围内。
+   注意:只能补间隙,不能覆盖到球本身——否则鼠标停在球上时菜单就恒处于显示态,
+   点球会被误认为"弹菜单",且移开后菜单不消失。 */
 .yeyi-floating-menu::after {
   content: "";
   position: absolute;
-  /* 菜单右贴边、球在菜单右下外侧 8px 处。伪元素从菜单底部向下延伸到球的中部,
-     宽度覆盖到球,保证斜向移动路径全程在 hover 区内。 */
   left: 0;
   right: 0;
-  bottom: -52px;
-  height: 52px;
+  bottom: -10px;
+  height: 10px;
 }
 
 .yeyi-floating-root:hover .yeyi-floating-menu,

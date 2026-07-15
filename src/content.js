@@ -2079,10 +2079,18 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
   }
 
   function updatePageTheme() {
-    // body 与 html 都看:很多站点 body 透明而 html 深色(或反之),取两者中较暗者更贴合视觉。
-    const bodyStyle = window.getComputedStyle(document.body || document.documentElement);
-    const htmlStyle = window.getComputedStyle(document.documentElement);
-    const dark = isDarkColor(bodyStyle.backgroundColor) || isDarkColor(htmlStyle.backgroundColor);
+    // 主题判定优先级:系统 prefers-color-scheme 最可靠(全局深色模式下页面背景常是透明/浅色,
+    // 仅看背景色会误判成浅色,导致悬浮菜单/侧栏在深色系统下显示成浅色)。
+    // 系统未明确时,退回看 html/body 背景色取较暗者。
+    const systemDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+    let dark;
+    if (systemDark === true) {
+      dark = true;
+    } else {
+      const bodyStyle = window.getComputedStyle(document.body || document.documentElement);
+      const htmlStyle = window.getComputedStyle(document.documentElement);
+      dark = isDarkColor(bodyStyle.backgroundColor) || isDarkColor(htmlStyle.backgroundColor);
+    }
     const theme = dark ? "dark" : "light";
     if (document.documentElement.dataset.yeyiTheme !== theme) {
       document.documentElement.dataset.yeyiTheme = theme;
