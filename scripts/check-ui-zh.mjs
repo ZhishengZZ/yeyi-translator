@@ -6,12 +6,12 @@ const root = resolve(import.meta.dirname, "..");
 const checks = [
   {
     file: "src/popup.html",
-    mustInclude: ["雅译", "翻译此页", "双语", "替换", "本站自动翻译"],
+    mustInclude: ["雅译", "翻译此页", "双语", "替换", "本站自动翻译", "appVersion"],
     mustNotInclude: ["Translate page", ">Restore<", ">Settings<", "Current page", "Target language"]
   },
   {
     file: "src/options.html",
-    mustInclude: ["雅译设置", "模型服务", "翻译偏好", "速度与并发", "实验室功能", "搜索框中译英", "测试连接", "已保存"],
+    mustInclude: ["雅译设置", "模型服务", "翻译偏好", "速度与并发", "实验室功能", "搜索框中译英", "测试连接", "已保存", "appVersion"],
     mustNotInclude: ["Yeyi Settings", "Model service", "Translation preferences", "Performance", "Test connection"]
   },
   {

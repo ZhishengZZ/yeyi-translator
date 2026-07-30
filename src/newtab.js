@@ -6,6 +6,8 @@ const MAX_TOP_SITES = 10;
 const TILE_COLORS = ["#4285F4", "#EA4335", "#FBBC05", "#34A853", "#A142F4", "#24C1E0", "#FF6D00"];
 
 const els = {
+  appVersion: document.querySelector("#appVersion"),
+  appFooter: document.querySelector("#appFooter"),
   form: document.querySelector("#searchForm"),
   input: document.querySelector("#queryInput"),
   omni: document.querySelector("#omni"),
@@ -28,6 +30,9 @@ let isComposing = false;
 init();
 
 async function init() {
+  const version = chrome.runtime.getManifest().version;
+  els.appVersion.textContent = `v${version}`;
+  els.appFooter.textContent = `雅译 v${version} · 张枳生制作`;
   try {
     settings = await runtime({ type: "YEYI_GET_SETTINGS" });
   } catch {

@@ -61,6 +61,8 @@ const importConfig = document.querySelector("#importConfig");
 const importFile = document.querySelector("#importFile");
 const statsSummary = document.querySelector("#statsSummary");
 const statsGrid = document.querySelector("#statsGrid");
+const appVersion = document.querySelector("#appVersion");
+const appFooter = document.querySelector("#appFooter");
 
 let settings = DEFAULT_SETTINGS;
 let saveTimer = 0;
@@ -69,6 +71,9 @@ let toastTimer = 0;
 init();
 
 async function init() {
+  const version = chrome.runtime.getManifest().version;
+  appVersion.textContent = `v${version}`;
+  appFooter.textContent = `雅译 v${version} · 张枳生制作`;
   settings = mergeSettings({});
   renderProviderPresets();
   render();

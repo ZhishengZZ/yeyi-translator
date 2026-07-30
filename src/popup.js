@@ -3,6 +3,7 @@ import { matchesHost, removeHost, runtime, uniqueHosts, withTimeout } from "./ut
 import { applyTheme, nextTheme, themeLabel } from "./theme.js";
 
 const elements = {
+  appVersion: document.querySelector("#appVersion"),
   providerLine: document.querySelector("#providerLine"),
   mainAction: document.querySelector("#mainAction"),
   popupControls: document.querySelector("#popupControls"),
@@ -48,6 +49,7 @@ let currentStatus = {
 init();
 
 async function init() {
+  elements.appVersion.textContent = `v${chrome.runtime.getManifest().version}`;
   elements.openOptions.addEventListener("click", () => chrome.runtime.openOptionsPage());
   elements.onboardGo.addEventListener("click", () => {
     chrome.runtime.openOptionsPage();

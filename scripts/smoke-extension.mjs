@@ -281,6 +281,7 @@ try {
   assert(suggestionOff.omniHidden, "newtab suggestion remained visible after hiding suggestions");
 
   const ntp = await evaluate(newtabPage, `({
+    versionText: document.querySelector('#appVersion')?.textContent || "",
     tileCount: document.querySelectorAll('#tiles .ntp-tile').length,
     hasChromeSettingsShell: !!document.querySelector('.ntp.settings-page'),
     hasSettingsCards: document.querySelectorAll('.settings-section').length >= 2,
@@ -290,6 +291,7 @@ try {
     hasSubmitArrow: !!document.querySelector('.ntp-search button[type="submit"]')
   })`);
   assert(ntp.tileCount >= 1, "newtab top-sites tiles did not render");
+  assert(ntp.versionText === "v0.7.0", "newtab did not show manifest version 0.7.0");
   assert(ntp.hasChromeSettingsShell && ntp.hasSettingsCards, "newtab is not using the Chrome Settings-style shell/cards");
   assert(ntp.hasSearch && ntp.hasMic && ntp.hasLens, "newtab search capsule / mic / lens buttons missing");
   assert(!ntp.hasSubmitArrow, "newtab should not keep the old blue submit-arrow button");
@@ -307,11 +309,13 @@ try {
     (document.querySelector('.yeyi-summary-result-tldr')?.textContent || '').includes('[sum]')
   `);
   const summaryResult = await evaluate(page, `({
+    versionText: document.querySelector('.yeyi-summary-version')?.textContent || "",
     tldr: document.querySelector('.yeyi-summary-result-tldr')?.textContent || "",
     bullets: Array.from(document.querySelectorAll('.yeyi-summary-result-bullets li')).map((li) => li.textContent || ""),
     keyInfo: document.querySelector('.yeyi-summary-result-keyinfo')?.textContent || ""
   })`);
   assert(summaryResult.tldr.includes("[sum]"), "summary TL;DR was not rendered");
+  assert(summaryResult.versionText === "v0.7.0", "summary panel did not show manifest version 0.7.0");
   assert(summaryResult.bullets.length >= 2, "summary bullets were not rendered");
   assert(summaryResult.keyInfo.includes("[sum]"), "summary key info was not rendered");
   assert(summaryRequests.length > 0, "summary did not call the provider");

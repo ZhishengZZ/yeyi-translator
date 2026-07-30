@@ -2259,12 +2259,14 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
     root.className = `${NOTRANSLATE_CLASS} yeyi-summary-root`;
     root.dataset.yeyi = "1";
     root.dataset.state = "closed";
+    const version = chrome.runtime.getManifest().version;
     root.innerHTML = `
       <aside class="yeyi-summary-panel" role="dialog" aria-label="AI 网页总结">
         <header class="yeyi-summary-head">
           <div class="yeyi-summary-title">
             <span class="yeyi-summary-mark">译</span>
             <span>AI 网页总结</span>
+            <span class="yeyi-summary-version">v${version}</span>
           </div>
           <button type="button" class="yeyi-summary-close" data-action="close" aria-label="关闭">✕</button>
         </header>
