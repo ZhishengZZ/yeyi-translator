@@ -1,7 +1,7 @@
 // 雅译 Yeyi · 张枳生制作
 
-// 默认术语表:挑「模型经常译错/译得不统一」的高频词,覆盖 AI、开发、互联网、
-// 商业新闻四类常读内容;刻意避开一词多义会误伤的词(如 issue/release)。
+// 可选术语表预设:仅在用户主动点击「填入术语表预设」时使用。
+// 默认设置保持为空，避免无关术语长期占用模型上下文。
 export const DEFAULT_GLOSSARY = [
   // AI / 模型
   "LLM = 大语言模型",
@@ -200,7 +200,7 @@ export const DEFAULT_SETTINGS = {
   temperature: 0.2,
   maxTokens: 8000,
   thinkingMode: "disabled",
-  glossary: DEFAULT_GLOSSARY,
+  glossary: "",
   // maxTokens 提到 8000 后,大批次响应 30s 偶发掐头;40s 与预设档位更匹配。
   requestTimeoutMs: 40000,
   maxRetries: 1,
@@ -284,7 +284,7 @@ export function glossaryToText(glossary) {
     .filter(Boolean)
     .slice(0, 80);
 
-  if (!lines.length) return "No glossary terms.";
+  if (!lines.length) return "";
   return lines
     .map((line) => {
       const [source, target] = line.split(/\s*=>\s*|\s*=\s*/);

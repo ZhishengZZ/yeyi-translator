@@ -28,6 +28,7 @@ const searchRequests = [];
 const contextRequests = [];
 const summaryRequests = [];
 const chatRequests = [];
+const translationPrompts = [];
 
 try {
   if (existsSync(profileDir)) rmSync(profileDir, { recursive: true, force: true });
@@ -315,6 +316,13 @@ try {
   assert(summaryResult.keyInfo.includes("[sum]"), "summary key info was not rendered");
   assert(summaryRequests.length > 0, "summary did not call the provider");
 
+  // 点击页面遮罩不应误关侧栏，只有右上角关闭按钮负责关闭。
+  await evaluate(page, `document.querySelector('.yeyi-summary-scrim').click()`);
+  const summaryStayedOpen = await evaluate(page, `
+    document.querySelector('.yeyi-summary-root')?.dataset.state === 'open'
+  `);
+  assert(summaryStayedOpen, "summary panel closed after clicking the page scrim");
+
   // 追问一条:填输入框 → 点发送 → 等 AI 回答出现。
   await evaluate(page, `
     const input = document.querySelector('#yeyiSummaryInput');
@@ -335,6 +343,8 @@ try {
   assert(chatTurns.userCount >= 1, "chat user turn was not rendered");
   assert(chatTurns.assistantText.includes("[chat]"), "chat assistant reply was not rendered");
   assert(chatRequests.length > 0, "chat did not call the provider");
+  assert(chatRequests.every((request) => !request.hasResponseFormat), "summary chat forced json_object response format");
+  assert(translationPrompts.every((prompt) => !prompt.includes("Glossary:")), "empty glossary still occupied prompt context");
 
   await evaluate(page, `document.querySelector('.yeyi-summary-close').click()`);
   await delay(300);
@@ -486,7 +496,7 @@ function serveProvider(port) {
     // 对话追问:messages 透传,system 含"网页阅读助手"。返回纯文本(callChatApi 不解析 JSON)。
     const isChat = parsed.messages.some((m) => m.role === "system" && String(m.content || "").includes("网页阅读助手"));
     if (isChat) {
-      chatRequests.push(userMessage);
+      chatRequests.push({ userMessage, hasResponseFormat: Boolean(parsed.response_format) });
       response.writeHead(200, { "Content-Type": "application/json" });
       response.end(JSON.stringify({
         choices: [{ message: { content: "[chat] 基于页面内容的回答" } }],
@@ -497,6 +507,7 @@ function serveProvider(port) {
     const jsonStart = userMessage.lastIndexOf("\n[");
     const items = JSON.parse(userMessage.slice(jsonStart >= 0 ? jsonStart + 1 : userMessage.lastIndexOf("[")));
     const isContextRefine = userMessage.includes("Context refinement task.");
+    translationPrompts.push(userMessage);
     if (isContextRefine) contextRequests.push(items);
     else providerRequests.push(items);
     // 模拟长段的第 2 片（::part1）丢失：验证 A2「有几片拼几片」——parent 仍应显示已成功片。

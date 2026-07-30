@@ -1,4 +1,5 @@
 import {
+  DEFAULT_GLOSSARY,
   DEFAULT_SETTINGS,
   QUALITY_LABELS,
   STORAGE_KEYS,
@@ -20,6 +21,7 @@ let cacheLoaded = false;
 let cacheDirty = false;
 let cacheWriteTimer = 0;
 const CACHE_DIRTY_KEY = "yeyi.cacheDirty";
+const DEFAULT_GLOSSARY_MIGRATION_KEY = "yeyi.defaultGlossaryCleared";
 
 const STYLE_GUIDES = {
   balanced: [
@@ -75,15 +77,25 @@ const CONTEXT_REFINE_GUIDE = [
 chrome.runtime.onInstalled.addListener(async () => {
   const stored = await chrome.storage.local.get([
     STORAGE_KEYS.settings,
-    STORAGE_KEYS.stats
+    STORAGE_KEYS.stats,
+    DEFAULT_GLOSSARY_MIGRATION_KEY
   ]);
   const existing = stored[STORAGE_KEYS.settings];
   if (!existing) {
-    await chrome.storage.local.set({ [STORAGE_KEYS.settings]: DEFAULT_SETTINGS });
+    await chrome.storage.local.set({
+      [STORAGE_KEYS.settings]: DEFAULT_SETTINGS,
+      [DEFAULT_GLOSSARY_MIGRATION_KEY]: true
+    });
   } else {
-    const migrated = clearUnkeyedProviderDefaults(existing);
+    let migrated = clearUnkeyedProviderDefaults(existing);
+    if (!stored[DEFAULT_GLOSSARY_MIGRATION_KEY]) {
+      migrated = clearLegacyDefaultGlossary(migrated);
+    }
     if (migrated !== existing) {
       await chrome.storage.local.set({ [STORAGE_KEYS.settings]: migrated });
+    }
+    if (!stored[DEFAULT_GLOSSARY_MIGRATION_KEY]) {
+      await chrome.storage.local.set({ [DEFAULT_GLOSSARY_MIGRATION_KEY]: true });
     }
   }
   if (!stored[STORAGE_KEYS.stats]) {
@@ -172,6 +184,11 @@ function clearUnkeyedProviderDefaults(settings) {
     baseUrl: "",
     model: ""
   };
+}
+
+function clearLegacyDefaultGlossary(settings) {
+  if (String(settings?.glossary || "").trim() !== DEFAULT_GLOSSARY.trim()) return settings;
+  return { ...settings, glossary: "" };
 }
 
 async function saveSettings(nextSettings) {
@@ -967,7 +984,8 @@ function buildChatRequestBody(messages, settings) {
     stream: false,
     messages
   };
-  if (caps.supportsResponseFormat) body.response_format = { type: "json_object" };
+  // 总结后的追问是普通对话，返回自然文本；不能强制 json_object。
+  // 部分 OpenAI 兼容服务会因提示词未要求 JSON 而直接返回 400。
   if (caps.supportsThinking) {
     body[caps.thinkingField] = { type: settings.thinkingMode === "enabled" ? "enabled" : "disabled" };
   }
@@ -1000,6 +1018,7 @@ function parseSummaryPayload(content) {
 function buildSelectionRequestBody(text, context, settings) {
   const caps = providerCapabilities(settings);
   const styleGuide = STYLE_GUIDES[settings.quality] || STYLE_GUIDES.balanced;
+  const glossary = glossaryToText(settings.glossary);
   const body = {
     model: settings.model.trim(),
     temperature: Math.min(0.3, settings.temperature),
@@ -1016,7 +1035,7 @@ function buildSelectionRequestBody(text, context, settings) {
         content: [
           `Target language: ${settings.targetLanguage}`,
           `Style instructions: ${styleGuide}`,
-          `Glossary:\n${glossaryToText(settings.glossary)}`,
+          glossary ? `Glossary:\n${glossary}` : "",
           context ? `Surrounding paragraph (context only, do NOT translate it):\n${context}` : "",
           "",
           "Translate the selected text below. Return only the translation of the selected text.",
@@ -1135,6 +1154,7 @@ function buildMessages(items, settings) {
   const styleGuide = STYLE_GUIDES[settings.quality] || STYLE_GUIDES.balanced;
   const context = settings.pageContext || {};
   const list = items.map((item) => ({ id: item.id, text: item.text }));
+  const glossary = glossaryToText(settings.glossary);
 
   return [
     {
@@ -1159,8 +1179,7 @@ function buildMessages(items, settings) {
         `Topic hint: ${context.topicHint || "None"}`,
         `Style preset: ${quality}`,
         `Style instructions: ${styleGuide}`,
-        "Glossary:",
-        glossaryToText(settings.glossary),
+        glossary ? `Glossary:\n${glossary}` : "",
         "",
         "Translate every item in the JSON array below. Return strict JSON only, no Markdown, no code fence. Required format:",
         '{"translations":[{"id":"original id","text":"translated text"}]}',
@@ -1186,6 +1205,7 @@ function buildContextRefineMessages(items, settings) {
     before: item.before || "",
     after: item.after || ""
   }));
+  const glossary = glossaryToText(settings.glossary);
 
   return [
     {
@@ -1212,8 +1232,7 @@ function buildContextRefineMessages(items, settings) {
         `Topic hint: ${context.topicHint || "None"}`,
         "Page outline:",
         outline,
-        "Glossary:",
-        glossaryToText(settings.glossary),
+        glossary ? `Glossary:\n${glossary}` : "",
         "",
         "For each item, use before/after/headingPath/previousTranslation only as context. Translate or refine only the text field.",
         "Return required format:",
