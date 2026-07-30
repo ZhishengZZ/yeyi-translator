@@ -212,6 +212,8 @@ try {
   assert(autoTranslated.translationBlocks >= 4, "global floating-ball translate state did not continue on next page");
   await delay(2800);
 
+  const themeBeforeRestore = await evaluate(page, `document.documentElement.dataset.yeyiTheme || ""`);
+  assert(themeBeforeRestore, "floating UI theme was not set before restore");
   await evaluate(page, `document.querySelector('.yeyi-floating-ball').click()`);
 
   await waitForCondition(page, () => `
@@ -223,12 +225,14 @@ try {
   const restored = await evaluate(page, `({
     translations: document.querySelectorAll('.yeyi-translation').length,
     hasToolbar: !!document.querySelector('.yeyi-toolbar'),
-    articleHtml: document.querySelector('article')?.innerHTML || ""
+    articleHtml: document.querySelector('article')?.innerHTML || "",
+    floatingTheme: document.documentElement.dataset.yeyiTheme || ""
   })`);
 
   assert(restored.translations === 0, "translations remained after restore");
   assert(!restored.hasToolbar, "toolbar remained after restore");
   assert(restored.articleHtml === originalArticleHtml, "article DOM was not restored to the original snapshot");
+  assert(restored.floatingTheme === themeBeforeRestore, "floating menu theme changed after restore");
 
   const offUrl = `${testUrl}?next=2`;
   await evaluate(page, `location.href = ${JSON.stringify(offUrl)}`);

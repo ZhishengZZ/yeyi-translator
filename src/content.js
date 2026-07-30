@@ -1451,7 +1451,9 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
     state.queue.clear();
     delete document.documentElement.dataset.yeyiMode;
     delete document.documentElement.dataset.yeyiBilingualStyle;
-    delete document.documentElement.dataset.yeyiTheme;
+    // 悬浮球和菜单在恢复原文后仍会保留，不能清掉它们依赖的主题标记。
+    // 重新判定一次页面主题，避免菜单从暗色瞬间退回默认浅色。
+    updatePageTheme();
     if (options.disableGlobal && !options.keepGlobal) {
       await setGlobalTranslate(false).catch(() => {});
     }
