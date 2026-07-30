@@ -604,7 +604,7 @@ h6 .yeyi-translation {
 .yeyi-summary-root[data-state="open"] .yeyi-summary-panel { transform: translateX(0); }
 .yeyi-summary-root[data-state="open"] .yeyi-summary-scrim {
   opacity: 1;
-  pointer-events: none;
+  pointer-events: auto;
   background: rgba(32, 33, 36, 0.32);
 }
 

@@ -2275,7 +2275,7 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
           <button type="button" class="yeyi-summary-send" data-action="send" aria-label="发送">发送</button>
         </footer>
       </aside>
-      <div class="yeyi-summary-scrim" aria-hidden="true"></div>
+      <div class="yeyi-summary-scrim" data-action="close" aria-hidden="true"></div>
     `;
     document.documentElement.append(root);
     state.summaryRoot = root;

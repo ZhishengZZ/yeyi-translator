@@ -329,12 +329,12 @@ try {
   `);
   assert(summaryControlsAreHittable, "summary scrim covered the close button or chat input");
 
-  // 点击页面遮罩不应误关侧栏，只有右上角关闭按钮负责关闭。
-  await evaluate(page, `document.querySelector('.yeyi-summary-scrim').click()`);
+  // 侧栏内部点击保持打开；左侧页面遮罩点击才收回。
+  await evaluate(page, `document.querySelector('.yeyi-summary-panel').click()`);
   const summaryStayedOpen = await evaluate(page, `
     document.querySelector('.yeyi-summary-root')?.dataset.state === 'open'
   `);
-  assert(summaryStayedOpen, "summary panel closed after clicking the page scrim");
+  assert(summaryStayedOpen, "summary panel closed after clicking inside the panel");
 
   // 追问一条:填输入框 → 点发送 → 等 AI 回答出现。
   await evaluate(page, `
@@ -359,12 +359,21 @@ try {
   assert(chatRequests.every((request) => !request.hasResponseFormat), "summary chat forced json_object response format");
   assert(translationPrompts.every((prompt) => !prompt.includes("Glossary:")), "empty glossary still occupied prompt context");
 
-  await evaluate(page, `document.querySelector('.yeyi-summary-close').click()`);
+  await evaluate(page, `document.querySelector('.yeyi-summary-scrim').click()`);
   await delay(300);
   const summaryClosed = await evaluate(page, `
     document.querySelector('.yeyi-summary-root')?.dataset.state !== 'open'
   `);
-  assert(summaryClosed, "summary panel did not close");
+  assert(summaryClosed, "summary panel did not close after clicking the page scrim");
+
+  await evaluate(page, `document.querySelector('.yeyi-floating-menu [data-action="summary"]').click()`);
+  await delay(300);
+  await evaluate(page, `document.querySelector('.yeyi-summary-close').click()`);
+  await delay(300);
+  const summaryClosedByButton = await evaluate(page, `
+    document.querySelector('.yeyi-summary-root')?.dataset.state !== 'open'
+  `);
+  assert(summaryClosedByButton, "summary panel did not close with the close button");
 
   const stats = await evaluate(extensionPage, `
     chrome.storage.local.get("yeyi.stats").then((value) => value["yeyi.stats"])
