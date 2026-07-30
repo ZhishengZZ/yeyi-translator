@@ -351,10 +351,15 @@ try {
   `);
   const chatTurns = await evaluate(page, `({
     userCount: document.querySelectorAll('.yeyi-summary-user').length,
-    assistantText: document.querySelector('.yeyi-summary-assistant:last-of-type .yeyi-summary-turn-text')?.textContent || ""
+    assistantText: document.querySelector('.yeyi-summary-assistant:last-of-type .yeyi-summary-turn-text')?.textContent || "",
+    strongText: document.querySelector('.yeyi-summary-assistant:last-of-type strong')?.textContent || "",
+    listCount: document.querySelectorAll('.yeyi-summary-assistant:last-of-type li').length
   })`);
   assert(chatTurns.userCount >= 1, "chat user turn was not rendered");
   assert(chatTurns.assistantText.includes("[chat]"), "chat assistant reply was not rendered");
+  assert(!chatTurns.assistantText.includes("**"), "assistant Markdown markers were shown as raw text");
+  assert(chatTurns.strongText === "结论", "assistant Markdown bold text was not rendered");
+  assert(chatTurns.listCount === 2, "assistant Markdown list was not rendered");
   assert(chatRequests.length > 0, "chat did not call the provider");
   assert(chatRequests.every((request) => !request.hasResponseFormat), "summary chat forced json_object response format");
   assert(translationPrompts.every((prompt) => !prompt.includes("Glossary:")), "empty glossary still occupied prompt context");
@@ -521,7 +526,7 @@ function serveProvider(port) {
       chatRequests.push({ userMessage, hasResponseFormat: Boolean(parsed.response_format) });
       response.writeHead(200, { "Content-Type": "application/json" });
       response.end(JSON.stringify({
-        choices: [{ message: { content: "[chat] 基于页面内容的回答" } }],
+        choices: [{ message: { content: "[chat] **结论**\n\n1. 基于页面内容回答\n2. 保留关键事实" } }],
         usage: { prompt_tokens: 40, completion_tokens: 12, total_tokens: 52 }
       }));
       return;

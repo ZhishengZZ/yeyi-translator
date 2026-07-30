@@ -714,6 +714,23 @@ h6 .yeyi-translation {
   white-space: pre-wrap;
   word-break: break-word;
 }
+.yeyi-summary-turn-text p { margin: 0 0 9px; }
+.yeyi-summary-turn-text p:last-child { margin-bottom: 0; }
+.yeyi-summary-turn-text ol,
+.yeyi-summary-turn-text ul {
+  margin: 4px 0 9px;
+  padding-left: 22px;
+}
+.yeyi-summary-turn-text ol:last-child,
+.yeyi-summary-turn-text ul:last-child { margin-bottom: 0; }
+.yeyi-summary-turn-text li { margin: 4px 0; }
+.yeyi-summary-turn-text strong { font-weight: 600; }
+.yeyi-summary-turn-text code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  font: 0.92em/1.4 Consolas, 'SFMono-Regular', monospace;
+}
 .yeyi-summary-assistant .yeyi-summary-turn-text {
   background: #f1f3f4;
   color: #202124;

@@ -2429,7 +2429,8 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
       label.textContent = msg.role === "user" ? "你" : "AI";
       const content = document.createElement("div");
       content.className = "yeyi-summary-turn-text";
-      content.textContent = msg.content;
+      if (msg.role === "assistant" && !msg.error) renderSummaryMarkdown(content, msg.content);
+      else content.textContent = msg.content;
       turn.append(label, content);
       body.append(turn);
     }
@@ -2440,6 +2441,58 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
       body.append(loading);
     }
     body.scrollTop = body.scrollHeight;
+  }
+
+  // 安全渲染模型常用的轻量 Markdown；只创建 DOM/Text 节点，不把模型输出交给 innerHTML。
+  function renderSummaryMarkdown(container, markdown) {
+    const lines = String(markdown || "").replace(/\r\n?/g, "\n").split("\n");
+    let list = null;
+    let listType = "";
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line) {
+        list = null;
+        listType = "";
+        continue;
+      }
+
+      const ordered = line.match(/^\d+[.)]\s+(.+)$/);
+      const unordered = line.match(/^[-*+]\s+(.+)$/);
+      const nextType = ordered ? "ol" : unordered ? "ul" : "";
+      if (nextType) {
+        if (!list || listType !== nextType) {
+          list = document.createElement(nextType);
+          listType = nextType;
+          container.append(list);
+        }
+        const item = document.createElement("li");
+        appendSummaryInlineMarkdown(item, ordered?.[1] || unordered?.[1] || "");
+        list.append(item);
+        continue;
+      }
+
+      list = null;
+      listType = "";
+      const paragraph = document.createElement("p");
+      appendSummaryInlineMarkdown(paragraph, line);
+      container.append(paragraph);
+    }
+  }
+
+  function appendSummaryInlineMarkdown(container, text) {
+    const source = String(text || "");
+    const tokenPattern = /(\*\*([^*]+)\*\*|`([^`]+)`)/g;
+    let cursor = 0;
+    let match;
+    while ((match = tokenPattern.exec(source))) {
+      if (match.index > cursor) container.append(document.createTextNode(source.slice(cursor, match.index)));
+      const node = document.createElement(match[2] !== undefined ? "strong" : "code");
+      node.textContent = match[2] ?? match[3] ?? "";
+      container.append(node);
+      cursor = match.index + match[0].length;
+    }
+    if (cursor < source.length) container.append(document.createTextNode(source.slice(cursor)));
   }
 
   function renderSummaryResult(body, result) {
