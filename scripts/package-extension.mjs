@@ -1,4 +1,5 @@
-import { createWriteStream, mkdirSync, readdirSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { createWriteStream, mkdirSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,10 +13,9 @@ const outputFile = join(outputDir, "yeyi-translator-source.tar.gz");
 mkdirSync(outputDir, { recursive: true });
 await validateManifest();
 
-const files = listFiles(projectRoot).filter((file) => {
-  const rel = relative(projectRoot, file).replace(/\\/g, "/");
-  return !rel.startsWith("dist/") && !rel.startsWith("node_modules/");
-});
+// 只发布 Git 已跟踪文件：自动遵守 .gitignore，避免把 .git、内部研发文档、
+// 本地环境文件或构建产物混入公开发布包。
+const files = listTrackedFiles(projectRoot);
 
 await writeTarGz(files, outputFile);
 console.log(`Packaged ${files.length} files -> ${outputFile}`);
@@ -31,18 +31,12 @@ async function validateManifest() {
   }
 }
 
-function listFiles(dir) {
-  const result = [];
-  for (const name of readdirSync(dir)) {
-    const full = join(dir, name);
-    const stat = statSync(full);
-    if (stat.isDirectory()) {
-      result.push(...listFiles(full));
-    } else {
-      result.push(full);
-    }
-  }
-  return result;
+function listTrackedFiles(dir) {
+  const output = execFileSync("git", ["-C", dir, "ls-files", "-z"], { encoding: "utf8" });
+  return output
+    .split("\0")
+    .filter(Boolean)
+    .map((name) => join(dir, ...name.split("/")));
 }
 
 async function writeTarGz(files, output) {
@@ -95,4 +89,3 @@ function writeOctal(buffer, offset, length, value) {
   buffer.write(text, offset, length - 1, "ascii");
   buffer[offset + length - 1] = 0;
 }
-
