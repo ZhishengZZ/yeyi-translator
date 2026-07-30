@@ -316,6 +316,19 @@ try {
   assert(summaryResult.keyInfo.includes("[sum]"), "summary key info was not rendered");
   assert(summaryRequests.length > 0, "summary did not call the provider");
 
+  const summaryControlsAreHittable = await evaluate(page, `
+    (function () {
+      const close = document.querySelector('.yeyi-summary-close');
+      const input = document.querySelector('.yeyi-summary-input');
+      const closeRect = close.getBoundingClientRect();
+      const inputRect = input.getBoundingClientRect();
+      const closeHit = document.elementFromPoint(closeRect.left + closeRect.width / 2, closeRect.top + closeRect.height / 2);
+      const inputHit = document.elementFromPoint(inputRect.left + inputRect.width / 2, inputRect.top + inputRect.height / 2);
+      return close.contains(closeHit) && input.contains(inputHit);
+    })()
+  `);
+  assert(summaryControlsAreHittable, "summary scrim covered the close button or chat input");
+
   // 点击页面遮罩不应误关侧栏，只有右上角关闭按钮负责关闭。
   await evaluate(page, `document.querySelector('.yeyi-summary-scrim').click()`);
   const summaryStayedOpen = await evaluate(page, `

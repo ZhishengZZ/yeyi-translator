@@ -584,6 +584,7 @@ h6 .yeyi-translation {
 
 .yeyi-summary-panel {
   position: absolute;
+  z-index: 1;
   top: 0;
   right: 0;
   bottom: 0;
@@ -603,7 +604,7 @@ h6 .yeyi-translation {
 .yeyi-summary-root[data-state="open"] .yeyi-summary-panel { transform: translateX(0); }
 .yeyi-summary-root[data-state="open"] .yeyi-summary-scrim {
   opacity: 1;
-  pointer-events: auto;
+  pointer-events: none;
   background: rgba(32, 33, 36, 0.32);
 }
 
@@ -832,4 +833,3 @@ h6 .yeyi-translation {
   .yeyi-summary-loading .yeyi-dot { animation: none; transition: none; }
   .yeyi-summary-root[data-state="open"] .yeyi-summary-panel { transform: none; }
 }
-
