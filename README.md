@@ -85,4 +85,20 @@ Enable AI page summary under **Settings -> Reading aids**, then open it from the
 
 This feature uses the model service configured in the extension and therefore consumes the corresponding API quota.
 
+## 💗 Streaming Follow-Translate
+
+For infinite-feed pages like X/Twitter: enable "Streaming Follow-Translate" under **Settings -> Translation preferences** or the floating-ball menu, and new content is translated automatically as you scroll — no re-clicking needed. It idles down to save quota when scrolling stops, and retries on its own when rate-limited. While active, the floating ball turns into a translucent pulsing pixel heart 💗. Continuously consumes quota via your configured model.
+
+## 🎭 Translation styles
+
+`信达雅` stays the default. The rest aren't just relabeled prompts — each draws a hard line on fidelity, natural rhythm, terminology, formality, and how much literary latitude the model gets. Full breakdown in [docs/PRODUCT.md](./docs/PRODUCT.md).
+
+## 🙏 Credits & License
+
+Yeyi's DOM translation engine is **ported and adapted from [Read Frog](https://github.com/mengxi-ream/read-frog)** (GPL-3.0). Because of that, **Yeyi is released under the GNU GPL v3.0** — full attribution and the list of changes are in [CREDITS.md](./CREDITS.md), and the license text is in [LICENSE](./LICENSE).
+
+Big thanks to **[@mengxi-ream](https://github.com/mengxi-ream)** and the Read Frog project for the engine Yeyi stands on. 🐸
+
+## 🧪 Status
+
 **0.7.1** - brings select-to-translate, AI page summary and Streaming Follow-Translate out of Labs as official features. Streaming Follow-Translate (off by default) keeps translating new content as you scroll infinite-feed sites like X/Twitter, with no re-clicking needed, idles down to save quota when scrolling stops, and ships with a built-in site rule for X (x.com). Existing page translation, new tab, AI summary, select-to-translate, context refinement and bilingual mode are unchanged. Still pre-1.0; issues and PRs are welcome.
