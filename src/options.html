@@ -108,6 +108,12 @@
             <span class="switch-ui" aria-hidden="true"></span>
             <span>显示悬浮球</span>
           </label>
+          <label class="switch-line">
+            <input id="streamingMode" type="checkbox" />
+            <span class="switch-ui" aria-hidden="true"></span>
+            <span>心动跟译</span>
+          </label>
+          <p class="section-note">适合 X / 微博等无限滚动页面：开启后新内容自动跟随翻译，无需反复点击；停滚时自动降速以节省额度，限速后自行重试不卡死。也可在悬浮球菜单里随时开关。会持续消耗额度，走你配置的同一模型。</p>
         </article>
 
         <article class="settings-section">
@@ -206,13 +212,30 @@
         </article>
 
         <article class="settings-section">
-          <header><span class="seq">05</span><h2>实验室功能</h2></header>
+          <header><span class="seq">05</span><h2>阅读辅助</h2></header>
           <label class="switch-line">
             <input id="selectionTranslate" type="checkbox" />
             <span class="switch-ui" aria-hidden="true"></span>
             <span>划词翻译</span>
           </label>
           <p class="section-note">选中网页文字后出现「译」气泡，点一下就地显示译文，可一键复制。走你配置的同一模型，遵循当前翻译风格与术语表。</p>
+          <label class="switch-line">
+            <input id="labSummary" type="checkbox" />
+            <span class="switch-ui" aria-hidden="true"></span>
+            <span>AI 网页总结助手</span>
+          </label>
+          <p class="section-note">打开后悬浮球菜单出现「总结本页」：一键提炼当前页面讲了什么（要点 + 关键信息），并可就页面内容追问。走你配置的同一模型，会消耗额度。需要先配置好 API Key。</p>
+          <label>
+            <span>总结风格</span>
+            <select id="summaryStyle">
+              <option value="concise">简洁（要点为主）</option>
+              <option value="detailed">详细（要点展开）</option>
+            </select>
+          </label>
+        </article>
+
+        <article class="settings-section">
+          <header><span class="seq">06</span><h2>实验室功能</h2></header>
           <label class="switch-line">
             <input id="searchBoxTranslate" type="checkbox" />
             <span class="switch-ui" aria-hidden="true"></span>
@@ -232,23 +255,10 @@
             <span>启用雅译新标签页增强</span>
           </label>
           <p class="section-note">默认关闭：新标签页只显示搜索框和常用网站，接近浏览器原生。打开后显示雅译品牌头与中文搜索词的英文建议。Chrome 的标签页接管由扩展清单决定，不能在运行时完全切回原生页；若要彻底恢复，请在扩展管理页停用本扩展。</p>
-          <label class="switch-line">
-            <input id="labSummary" type="checkbox" />
-            <span class="switch-ui" aria-hidden="true"></span>
-            <span>AI 网页总结助手</span>
-          </label>
-          <p class="section-note">实验性功能。打开后悬浮球菜单出现「总结本页」：一键提炼当前页面讲了什么（要点 + 关键信息），并可就页面内容追问。走你配置的同一模型，会消耗额度。需要先配置好 API Key。</p>
-          <label>
-            <span>总结风格</span>
-            <select id="summaryStyle">
-              <option value="concise">简洁（要点为主）</option>
-              <option value="detailed">详细（要点展开）</option>
-            </select>
-          </label>
         </article>
 
         <article class="settings-section glossary-section">
-          <header><span class="seq">06</span><h2>术语表</h2></header>
+          <header><span class="seq">07</span><h2>术语表</h2></header>
           <div class="preset-actions">
             <button class="secondary-button compact" id="fillGlossaryPreset" type="button">填入术语表预设</button>
             <button class="secondary-button compact" id="clearGlossary" type="button">清空术语表</button>
@@ -262,7 +272,7 @@
         </article>
 
         <article class="settings-section glossary-section">
-          <header><span class="seq">07</span><h2>数据与统计</h2></header>
+          <header><span class="seq">08</span><h2>数据与统计</h2></header>
           <p class="section-note" id="statsSummary">正在读取用量统计...</p>
           <div class="stats-grid" id="statsGrid" aria-live="polite"></div>
           <div class="button-row">

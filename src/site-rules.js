@@ -34,5 +34,18 @@ export const BUILT_IN_SITE_RULES = [
     id: "shopee",
     matches: ["seller.shopee.*", "shopee.*"],
     injectedCss: ".WBVL_7,.ellipsis-content {-webkit-line-clamp:unset!important;}"
+  },
+  {
+    // X / Twitter:无限滚动信息流。排除右侧推荐栏等噪音;短推文门槛调低,
+    // 避免一句话推文被当太短跳过。选择器以 data-testid 为准(实测可调)。
+    id: "twitter",
+    matches: ["x.com", "twitter.com"],
+    excludeSelectors: [
+      "[data-testid='sidebarColumn']",
+      "[aria-label='Who to follow']",
+      "[data-testid='trend']"
+    ],
+    minCharacters: 2,
+    minWords: 1
   }
 ];

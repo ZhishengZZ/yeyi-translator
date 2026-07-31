@@ -7,7 +7,7 @@
 **AI webpage translation you actually control — bring your own key, read anything, in your own words.**
 
 [![License](https://img.shields.io/badge/License-GPLv3-4c8eda?style=flat-square)](./LICENSE)
-[![Release](https://img.shields.io/badge/release-0.7.0-f0883e?style=flat-square)](https://github.com/ZhishengZZ/yeyi-translator/releases)
+[![Release](https://img.shields.io/badge/release-0.7.1-f0883e?style=flat-square)](https://github.com/ZhishengZZ/yeyi-translator/releases)
 [![Chrome MV3](https://img.shields.io/badge/Chrome-Manifest%20V3-3fb950?style=flat-square)](#-install)
 [![Dependencies](https://img.shields.io/badge/dependencies-zero-8957e5?style=flat-square)](#)
 
@@ -30,7 +30,7 @@ The popup, options, and new-tab page all speak Chrome's own design language. The
 Type Chinese into the new-tab search box and Yeyi hands back a clean English query to search with. Cross-language search without breaking your stride. *(Opt-in.)*
 
 🧠 **Summarize first, then keep asking.**
-The Labs AI page summary extracts the current page, produces an overview and key points, and supports follow-up questions grounded in that page. Answers safely render common Markdown such as bold text, lists, and inline code instead of exposing raw `**` markers. *(Opt-in.)*
+AI page summary extracts the current page, produces an overview and key points, and supports follow-up questions grounded in that page. Answers safely render common Markdown such as bold text, lists, and inline code instead of exposing raw `**` markers. *(Opt-in.)*
 
 🖱️ **Select-to-translate.**
 Highlight any sentence and a small **译** bubble appears — one click shows the translation right there, in your chosen style, ready to copy. *(Opt-in.)*
@@ -74,9 +74,9 @@ prompt = 提示词
 agent = 智能体
 ```
 
-## 🧠 AI Page Summary (Experimental)
+## 🧠 AI Page Summary
 
-Enable page summary under **Settings → Labs**, then open it from the extension to summarize the current page:
+Enable AI page summary under **Settings -> Reading aids**, then open it from the extension to summarize the current page:
 
 - Extracts the main page content and produces an overview, key points, and useful details.
 - Supports follow-up questions in the same sidebar using the current page as context.
@@ -85,16 +85,4 @@ Enable page summary under **Settings → Labs**, then open it from the extension
 
 This feature uses the model service configured in the extension and therefore consumes the corresponding API quota.
 
-## 🎭 Translation styles
-
-`信达雅` stays the default. The rest aren't just relabeled prompts — each draws a hard line on fidelity, natural rhythm, terminology, formality, and how much literary latitude the model gets. Full breakdown in [docs/PRODUCT.md](./docs/PRODUCT.md).
-
-## 🙏 Credits & License
-
-Yeyi's DOM translation engine is **ported and adapted from [Read Frog](https://github.com/mengxi-ream/read-frog)** (GPL-3.0). Because of that, **Yeyi is released under the GNU GPL v3.0** — full attribution and the list of changes are in [CREDITS.md](./CREDITS.md), and the license text is in [LICENSE](./LICENSE).
-
-Big thanks to **[@mengxi-ream](https://github.com/mengxi-ream)** and the Read Frog project for the engine Yeyi stands on. 🐸
-
-## 🧪 Status
-
-**0.7.0** — adds cross-language search on the enhanced new tab page, AI page summaries with follow-up questions, safe Markdown rendering, and more intuitive sidebar dismissal. The glossary now starts empty and uses prompt context only after entries are added. Version information is consistently shown across the popup, settings page, new tab page, and summary sidebar, while translation inside iframes and Shadow DOM, per-site rules, select-to-translate, context refinement, and bilingual mode remain available. Still pre-1.0; issues and PRs are welcome.
+**0.7.1** - brings select-to-translate, AI page summary and Streaming Follow-Translate out of Labs as official features. Streaming Follow-Translate (off by default) keeps translating new content as you scroll infinite-feed sites like X/Twitter, with no re-clicking needed, idles down to save quota when scrolling stops, and ships with a built-in site rule for X (x.com). Existing page translation, new tab, AI summary, select-to-translate, context refinement and bilingual mode are unchanged. Still pre-1.0; issues and PRs are welcome.

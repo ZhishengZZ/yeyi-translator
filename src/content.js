@@ -84,6 +84,13 @@
     lastStatusSentAt: 0,
     intersectionObserver: null,
     mutationObserver: null,
+    // 心动跟译(流媒体守望):低频循环扫视口附近未译段落 + 失败自愈 + 空闲降速。
+    streamingWatch: false,
+    watchTimer: 0,
+    watchIdle: 0,
+    watchRetryDebounce: 0,
+    watchLastScanCount: 0,  // 上一轮视口扫描真正入队的单元数(区分"可译但被跳过")
+    watchKeepAlive: 0,      // 心跳自身保持存活的连续轮数(与内容活动无关)
     floatingRoot: null,
     floatingButton: null,
     floatingMenu: null,
@@ -113,7 +120,7 @@
     selectionContext: "",
     selectionRequestId: 0,
     selectionRafId: 0,
-    // AI 网页总结(实验室)
+    // AI 网页总结
     summaryEnabled: false,
     summaryRoot: null,
     summaryOpen: false,
@@ -164,6 +171,9 @@
       state.summaryEnabled = Boolean(next.labSummary);
       if (!state.summaryEnabled && state.summaryOpen) closeSummaryPanel();
       if (!prevSummary && state.summaryEnabled) renderFloatingBall();
+      // 心动跟译开关即时生效:设置页打开时当前页面也启动守望,关闭时停,与菜单按钮一致。
+      if (next.streamingMode && state.active && !state.streamingWatch) startWatchLoop();
+      else if (next.streamingMode === false && state.streamingWatch) stopWatchLoop();
       if (prevBall !== next.showFloatingBall) renderFloatingBall();
       // 双语样式即改即生效:已翻译的译块(含 shadow 内)当场换装,无需重新翻译。
       if (next.bilingualStyle && next.bilingualStyle !== prevStyle) applyBilingualStyleLive(next.bilingualStyle);
@@ -287,6 +297,7 @@
       collectAllContextUnits();
       queueAllUnitsForContextRefine();
     }
+    if (settings.streamingMode) startWatchLoop();
     renderFloatingBall();
     renderStatus();
     return publicStatus();
@@ -839,6 +850,113 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
     clearTimeout(state.mutationTimer);
   }
 
+  // ══════════════════════════ 心动跟译:边刷边译守望 ════════════════════════
+  // 开启后低频心跳:重新 walk 视口附近新内容(mutation 漏接兜底)、即时入队已 walk
+  // 未译段落、延迟重试失败单元(限速自愈)、空闲降速省额度。只在 streamingMode 开启
+  // 且 state.active 时运行;关闭与 restorePage 一并停止,不影响现有文章翻译流程。
+  function startWatchLoop() {
+    if (state.streamingWatch) return;
+    state.streamingWatch = true;
+    state.watchIdle = 0;
+    state.watchRetryDebounce = 0;
+    scheduleWatchTick(1000);
+  }
+
+  function stopWatchLoop() {
+    state.streamingWatch = false;
+    state.watchIdle = 0;
+    state.watchRetryDebounce = 0;
+    state.watchKeepAlive = 0;
+    clearTimeout(state.watchTimer);
+    state.watchTimer = 0;
+  }
+
+  // 心跳自调度。循环本身无论内容是否活跃都要保持运行:watchIdle 只决定扫描频率,
+  // 永不杀死循环;watchKeepAlive 兜底"sync 异常后仍能续排"(try/catch 之外的保险)。
+  function scheduleWatchTick(delay) {
+    if (!state.streamingWatch || !state.active) return;
+    clearTimeout(state.watchTimer);
+    state.watchTimer = setTimeout(() => {
+      try {
+        watchTick();
+      } catch (error) {
+        state.error = error?.message || String(error);
+        renderStatus();
+      }
+      if (state.streamingWatch && state.active) {
+        // 连续 5 轮无新内容 -> 降速到 3s;一旦有新内容归零回 1s。
+        const next = state.watchIdle >= 5 ? 3000 : 1000;
+        scheduleWatchTick(next);
+      }
+    }, delay);
+  }
+
+  function watchTick() {
+    if (!state.active || !state.streamingWatch) return;
+    // 0. 心跳自身保活:哪怕当轮扫描/重试全被跳过,只要循环在跑,计数就往前走。
+    state.watchKeepAlive += 1;
+    if (state.watchKeepAlive >= 300) {
+      state.watchKeepAlive = 0;
+      renderFloatingBall();
+    }
+    // 上下文精翻期间不搅浑:跳过扫描与失败重试,保持循环存活但不打扰精翻。
+    if (state.contextRefining) return;
+    // 1. 重新 walk 整页新内容(mutation 漏接兜底);已 walk 节点幂等跳过。
+    observeTopLevelParagraphs(document.body || document.documentElement);
+    // 2. 即时入队视口附近已 walk 但未译的段落(不等 IntersectionObserver 触发)。
+    scanViewportForNewUnits();
+    // 3. 失败单元自愈:每 3 轮重试一次。持续 24 轮(~1 分钟快速期)仍失败则停手,
+    //    避免 key 失效/配额耗尽时对 API 的无限请求风暴。
+    if (countUnitsByStatus("error") > 0) {
+      state.watchRetryDebounce += 1;
+      if (state.watchRetryDebounce >= 3) {
+        if (state.watchRetryDebounce < 24) {
+          state.watchRetryDebounce = 0;
+          retryFailedUnits();
+        } else {
+          state.watchRetryDebounce = 25;
+        }
+      }
+    } else {
+      state.watchRetryDebounce = 0;
+    }
+    // 4. 空闲计数:上一轮真正入队过新单元 -> 归零;否则累加(驱动降速)。
+    if (state.watchLastScanCount > 0 || state.queue.size > 0) {
+      state.watchIdle = 0;
+    } else {
+      state.watchIdle += 1;
+    }
+  }
+
+  // 扫描"视口 + 下方 1000px"内已打标签但未翻译的段落,直接建单元入队。
+  // 覆盖 IntersectionObserver 未及时触发的漏译;已译(wrapper 在)跳过。
+  // 返回值只在本轮"确实有单元被入队"时大于 0,被跳过/过滤的不计数。
+  function scanViewportForNewUnits() {
+    if (!state.active || !state.walkId) {
+      state.watchLastScanCount = 0;
+      return 0;
+    }
+    const viewTop = window.scrollY - 200;
+    const viewBottom = window.scrollY + window.innerHeight + 1000;
+    let added = 0;
+    const selector = `[${PARAGRAPH_ATTR}][${WALKED_ATTR}="${cssEscape(state.walkId)}"]`;
+    const collect = (root) => {
+      if (!root?.querySelectorAll) return;
+      for (const el of root.querySelectorAll(selector)) {
+        if (el.querySelector(`.${WRAPPER_CLASS}`)) continue;
+        const rect = el.getBoundingClientRect();
+        const absTop = rect.top + window.scrollY;
+        if (absTop < viewTop || absTop > viewBottom) continue;
+        added += collectUnitsFromWalked(el, state.walkId);
+      }
+    };
+    collect(document);
+    for (const shadowRoot of state.shadowRoots) collect(shadowRoot);
+    state.watchLastScanCount = added;
+    if (added > 0) scheduleProcess(80);
+    return added;
+  }
+
   // 一路向下钻:当元素只有唯一 HTML 子元素、无文本子节点时,下沉到最内层,
   // 让译文尽量贴着真正承载文本的元素插入(避免包裹层制造多余缩进/边框)。
   function unwrapDeepestOnlyHTMLChild(element) {
@@ -858,10 +976,11 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
   }
 
   // 把一个已打标签的段落元素拆成翻译单元并入队(移植 translateWalkedElement)。
+  // 返回 0/1:1 表示本轮确实把该段落建了单元入队(供守望扫描区分"已译/被跳过")。
   function collectUnitsFromWalked(element, walkId) {
-    if (!state.active || !isHTMLElement(element)) return;
-    if (element.getAttribute(WALKED_ATTR) !== walkId) return;
-    if (element.querySelector(`.${WRAPPER_CLASS}`)) return; // 已翻译过
+    if (!state.active || !isHTMLElement(element)) return 0;
+    if (element.getAttribute(WALKED_ATTR) !== walkId) return 0;
+    if (element.querySelector(`.${WRAPPER_CLASS}`)) return 0; // 已翻译过
 
     if (element.getAttribute(PARAGRAPH_ATTR) !== null) {
       let hasBlockChild = false;
@@ -872,7 +991,7 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
 
       if (!hasBlockChild) {
         prepareUnit([element], false);
-        return;
+        return 1;
       }
 
       // 段落里夹着块级子元素:连续的行内节点合成一个单元,块级子元素各自递归。
@@ -888,6 +1007,7 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
         }
       }
       if (inlineRun.length) prepareUnit(inlineRun, !isFlexParent);
+      return 1;
     } else {
       for (const child of element.childNodes) {
         if (isHTMLElement(child)) collectUnitsFromWalked(child, walkId);
@@ -1406,6 +1526,7 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
   }
 
   async function restorePage(options = {}) {
+    stopWatchLoop();
     stopObservers();
     clearTimeout(state.processTimer);
     clearTimeout(state.statusTimer);
@@ -1982,6 +2103,7 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
       <button type="button" data-action="context">上下文精翻</button>
       <button type="button" data-action="restore">恢复原文</button>
       <button type="button" data-action="mode">双语⇋替换</button>
+      <button type="button" data-action="streaming">心动跟译</button>
       <button type="button" data-action="hide">隐藏本站悬浮球</button>
     `;
     menu.addEventListener("click", (event) => {
@@ -1995,6 +2117,7 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
       });
       if (action === "restore") restorePage({ keepFloating: true, disableGlobal: true });
       if (action === "mode") restartWithMode(state.mode === "bilingual" ? "replace" : "bilingual");
+      if (action === "streaming") toggleStreamingMode();
       if (action === "hide") hideFloatingForHost();
     });
 
@@ -2006,6 +2129,7 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
     state.floatingRetryBtn = menu.querySelector('[data-action="retry"]');
     state.floatingContextBtn = menu.querySelector('[data-action="context"]');
     state.floatingSummaryBtn = menu.querySelector('[data-action="summary"]');
+    state.floatingStreamingBtn = menu.querySelector('[data-action="streaming"]');
     updateFloatingBall();
   }
 
@@ -2030,11 +2154,40 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
       state.floatingContextBtn.disabled = state.contextRefining || state.processing;
       state.floatingContextBtn.textContent = state.contextRefining ? "精翻中…" : "上下文精翻";
     }
-    state.floatingButton.dataset.state = stateName;
-    state.floatingButton.querySelector(".yeyi-ball-text").textContent = state.contextRefining ? "精" : state.active ? "原" : "译";
-    const title = state.contextRefining ? "雅译：正在上下文精翻" : state.active ? "雅译：点击恢复原文" : "雅译：点击翻译当前页面";
+    if (state.floatingStreamingBtn) {
+      const on = Boolean(state.settings?.streamingMode);
+      state.floatingStreamingBtn.textContent = on ? "心动跟译 ✓" : "心动跟译";
+    }
+    // 心动跟译(流媒体守望)进行中:球态改 streaming,显示透明跳动像素心形。
+    const streaming = state.streamingWatch && state.active && !state.contextRefining && state.watchKeepAlive > 0;
+    state.floatingButton.dataset.state = streaming ? "streaming" : stateName;
+    const ballText = state.floatingButton.querySelector(".yeyi-ball-text");
+    if (streaming) {
+      ballText.textContent = "";
+      ballText.classList.add("yeyi-heart-pixel");
+    } else {
+      ballText.classList.remove("yeyi-heart-pixel");
+      ballText.textContent = state.contextRefining ? "精" : state.active ? "原" : "译";
+    }
+    const title = streaming ? "雅译：心动跟译进行中，点击恢复原文" : state.contextRefining ? "雅译：正在上下文精翻" : state.active ? "雅译：点击恢复原文" : "雅译：点击翻译当前页面";
     state.floatingButton.title = title;
     state.floatingButton.setAttribute("aria-label", title);
+  }
+
+  async function toggleStreamingMode() {
+    // 以"当前已生效的本地状态"取反,避免快速连点时两次都读到旧值(设置被吞)。
+    const next = !Boolean(state.streamingWatch);
+    try {
+      await sendRuntimeMessage({ type: "YEYI_SAVE_SETTINGS", settings: { streamingMode: next } });
+    } catch (error) {
+      state.error = error?.message || String(error);
+      renderStatus();
+      return;
+    }
+    state.settings = { ...(state.settings || {}), streamingMode: next };
+    if (next && state.active) startWatchLoop();
+    else if (!next) stopWatchLoop();
+    renderFloatingBall();
   }
 
   function publicStatus() {
@@ -2202,7 +2355,7 @@ h1 .yeyi-translation, h2 .yeyi-translation, h3 .yeyi-translation, h4 .yeyi-trans
     return (hash >>> 0).toString(36);
   }
 
-  // ══════════════════════════ AI 网页总结(实验室) ══════════════════════════
+  // ══════════════════════════ AI 网页总结 ══════════════════════════
   // 正文抽取:独立于翻译状态,从整页 DOM 取「用户要读的正文」。
   // 与翻译的 passesTextFilter 不同:① 不按语言跳过(中文正文要保留)
   // ② 不做翻译单元分组,只取叶子文本块 ③ 只读不改 DOM。

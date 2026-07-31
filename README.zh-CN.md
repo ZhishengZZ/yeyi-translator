@@ -7,7 +7,7 @@
 **网页翻译，交给你自己的模型 —— 自带 Key、原地读全文、还讲究信达雅。**
 
 [![License](https://img.shields.io/badge/许可证-GPLv3-4c8eda?style=flat-square)](./LICENSE)
-[![Release](https://img.shields.io/badge/版本-0.7.0-f0883e?style=flat-square)](https://github.com/ZhishengZZ/yeyi-translator/releases)
+[![Release](https://img.shields.io/badge/版本-0.7.1-f0883e?style=flat-square)](https://github.com/ZhishengZZ/yeyi-translator/releases)
 [![Chrome MV3](https://img.shields.io/badge/Chrome-Manifest%20V3-3fb950?style=flat-square)](#-安装)
 [![Dependencies](https://img.shields.io/badge/依赖-零-8957e5?style=flat-square)](#)
 
@@ -30,7 +30,7 @@
 在新标签页搜索框里敲中文，雅译顺手递回一条地道的英文查询词，直接拿去搜。跨语言搜索，不打断手感。*（需手动开启。）*
 
 🧠 **先总结，再接着问。**
-实验室中的 AI 网页总结会提取当前页面正文，生成概览、核心要点和关键信息，还能围绕这张网页继续追问。回复支持加粗、列表和行内代码等常用 Markdown，不再露出一串 `**`。*（需手动开启。）*
+AI 网页总结会提取当前页面正文，生成概览、核心要点和关键信息，还能围绕这张网页继续追问。回复支持加粗、列表和行内代码等常用 Markdown，不再露出一串 `**`。*（需手动开启。）*
 
 🖱️ **划词即译。**
 选中任意一句，旁边冒出一个 **译** 小气泡——点一下就地显示译文，按你选的风格来，还能一键复制。*（需手动开启。）*
@@ -74,9 +74,9 @@ prompt = 提示词
 agent = 智能体
 ```
 
-## 🧠 AI 网页总结（实验功能）
+## 🧠 AI 网页总结
 
-在设置页的“实验室”中启用网页总结后，可以从扩展入口总结当前网页：
+在设置页的「阅读辅助」中开启 AI 网页总结后，可以从扩展入口总结当前网页：
 
 - 自动提取网页正文，生成概览、核心要点和关键信息；
 - 在同一侧栏中继续提问，回答会结合当前网页内容；
@@ -85,16 +85,4 @@ agent = 智能体
 
 该功能使用扩展中配置的模型服务，会产生相应的 API 请求和额度消耗。
 
-## 🎭 翻译风格
-
-`信达雅` 保持默认。其余几档不是换了名字的同一套提示词——每一档在忠实度、中文节奏、术语稳定性、正式程度、以及给模型多少润色空间上，都划了硬边界。详见 [docs/PRODUCT.md](./docs/PRODUCT.md)。
-
-## 🙏 署名与许可
-
-雅译的 DOM 翻译引擎**移植并改编自 [Read Frog](https://github.com/mengxi-ream/read-frog)**（GPL-3.0）。因此**雅译整体以 GNU GPL v3.0 开源**——完整署名与改动清单见 [CREDITS.md](./CREDITS.md)，许可证全文见 [LICENSE](./LICENSE)。
-
-特别感谢 **[@mengxi-ream](https://github.com/mengxi-ream)** 和 Read Frog 项目，雅译正是站在它的引擎之上。🐸
-
-## 🧪 版本状态
-
-**0.7.0** —— 新增新标签页跨语言搜索、AI 网页总结与连续追问、安全 Markdown 渲染，以及更符合直觉的总结侧栏收起交互；术语表改为默认空白，仅在用户填写后占用提示词上下文。弹窗、设置页、新标签页和总结侧栏均已统一显示 0.7.0 版本信息，同时保留 iframe 与 Shadow DOM 内翻译、站点规则、划词翻译、上下文精翻和双语模式。仍属 1.0 前版本，欢迎提 Issue 和 PR。
+**0.7.1** -- 划词翻译、AI 网页总结与「心动跟译」移出实验室,成为正式功能。「心动跟译」(默认关闭):在 X/微博等无限滚动页面边刷边译,新内容自动跟随、无需反复点击,停滚时自动降速以节省额度,并为 X(x.com)内置站点适配规则;开启时悬浮球变成透明跳动的彩色像素心💗。现有网页翻译、新标签页、AI 总结、划词翻译、上下文精翻与双语模式不变。仍属 1.0 前版本,欢迎提 Issue 和 PR。

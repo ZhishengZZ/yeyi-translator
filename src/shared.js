@@ -217,12 +217,15 @@ export const DEFAULT_SETTINGS = {
   alwaysTranslateHosts: [],
   neverTranslateHosts: [],
   customSiteRules: "",
-  // 实验室:AI 网页总结助手。默认关:审核时该功能不存在,不增加商店单一用途风险。
+  // AI 网页总结助手。默认关:开启后悬浮球菜单出现「总结本页」,可就页面内容追问。
   labSummary: false,
   // 总结抽取的正文上限(超长截断并提示)。16000 字符约 4k token,多数页够用。
   summaryMaxChars: 16000,
   // 总结风格:concise 简洁(要点为主)/detailed 详细(含要点展开)。
-  summaryStyle: "concise"
+  summaryStyle: "concise",
+  // 心动跟译(流媒体守望)。默认关:开启后在无限滚动页(X/微博等)持续守望新内容,
+  // 进视口即译、失败自动重试、停滚降速省额度;不影响现有文章翻译流程。
+  streamingMode: false
 };
 
 export const QUALITY_LABELS = {

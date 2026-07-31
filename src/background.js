@@ -615,7 +615,7 @@ async function translateSelection(text, context) {
   };
 }
 
-// AI 网页总结(实验室):正文已由 content 抽取好,这里只做单次 LLM 调用产出结构化摘要。
+// AI 网页总结:正文已由 content 抽取好,这里只做单次 LLM 调用产出结构化摘要。
 // 记 stats,让用户感知用量。
 async function summarizePage(mainText, pageContext, sender) {
   const settings = await getSettings();
@@ -653,7 +653,7 @@ async function summarizePage(mainText, pageContext, sender) {
   };
 }
 
-// AI 对话(实验室,总结后追问):content 维护 messages 数组整体透传,这里只做调用 + 记账。
+// AI 对话(总结后追问):content 维护 messages 数组整体透传,这里只做调用 + 记账。
 async function chatTurn(messages, sender) {
   const settings = await getSettings();
   ensureConfigured(settings);
