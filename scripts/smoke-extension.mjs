@@ -9,6 +9,9 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 // 永远测本脚本所在的副本:多版本文件夹并存后,硬编码旧路径会测错版本。
 // 需要测其他副本时用环境变量 YEYI_EXT_ROOT 显式指定。
 const extensionRoot = process.env.YEYI_EXT_ROOT || resolve(scriptDir, "..");
+// 版本断言从 manifest 动态取,避免发版后硬编码版本号失效。
+const manifestJson = JSON.parse(await readFile(resolve(extensionRoot, "manifest.json"), "utf8"));
+const expectVersion = `v${manifestJson.version}`;
 const runId = `${process.pid}-${Date.now()}`;
 const profileDir = `C:/Users/10446/Documents/codex1/tmp/yeyi-smoke-profile-${runId}`;
 const pagePort = 18891 + (process.pid % 1000);
@@ -291,7 +294,7 @@ try {
     hasSubmitArrow: !!document.querySelector('.ntp-search button[type="submit"]')
   })`);
   assert(ntp.tileCount >= 1, "newtab top-sites tiles did not render");
-  assert(ntp.versionText === "v0.7.0", "newtab did not show manifest version 0.7.0");
+  assert(ntp.versionText === expectVersion, "newtab did not show manifest version");
   assert(ntp.hasChromeSettingsShell && ntp.hasSettingsCards, "newtab is not using the Chrome Settings-style shell/cards");
   assert(ntp.hasSearch && ntp.hasMic && ntp.hasLens, "newtab search capsule / mic / lens buttons missing");
   assert(!ntp.hasSubmitArrow, "newtab should not keep the old blue submit-arrow button");
@@ -315,7 +318,7 @@ try {
     keyInfo: document.querySelector('.yeyi-summary-result-keyinfo')?.textContent || ""
   })`);
   assert(summaryResult.tldr.includes("[sum]"), "summary TL;DR was not rendered");
-  assert(summaryResult.versionText === "v0.7.0", "summary panel did not show manifest version 0.7.0");
+  assert(summaryResult.versionText === expectVersion, "summary panel did not show manifest version");
   assert(summaryResult.bullets.length >= 2, "summary bullets were not rendered");
   assert(summaryResult.keyInfo.includes("[sum]"), "summary key info was not rendered");
   assert(summaryRequests.length > 0, "summary did not call the provider");
