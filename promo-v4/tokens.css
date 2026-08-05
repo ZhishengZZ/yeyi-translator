@@ -1,0 +1,171 @@
+/* Hallmark · genre: modern-minimal · macrostructure: Split Studio · H2 knobs: ratio=6/6, proof=product-capture, divider=negative-space
+ * theme: custom · vibe: "Google-native, clear, useful, calm" · paper: oklch(98.2% 0.006 250) · accent: oklch(52% 0.19 255)
+ * display: Roboto Flex + Noto Sans SC · body: Roboto + Noto Sans SC · axes: light / system-native / cool
+ * nav: N1b (links=3, dropdowns=none, scroll=frost) · footer: Ft2 (spaced, middot) · enrichment: interactive product simulations
+ * studied: no · context: explicit user direction · contrast: pass (40–41) · nav: N1b · footer: Ft2 · slop: pass (42–45)
+ * honest: pass (46) · chrome: pass (47) · tokens: pass (48) · responsive/mobile: pass (34, 49–57) · icons: pass (30)
+ * Hallmark · pre-emit critique: P4 H4 E4 S5 R5 V4
+ */
+
+:root {
+  color-scheme: light;
+
+  --font-display: "Roboto Flex", "Noto Sans SC", "PingFang SC", sans-serif;
+  --font-body: "Roboto", "Noto Sans SC", "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  --font-utility: "Roboto Flex", "Noto Sans SC", sans-serif;
+
+  --space-3xs: 0.125rem;
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2.5rem;
+  --space-2xl: 4rem;
+  --space-3xl: 6rem;
+  --space-4xl: 9rem;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.25rem;
+  --text-lg: 1.5625rem;
+  --text-xl: 1.953rem;
+  --text-2xl: 2.441rem;
+  --text-3xl: 3.052rem;
+  --text-display: clamp(3rem, 4.8vw + 0.4rem, 4.75rem);
+
+  --page-gutter: clamp(1rem, 4vw, 4.5rem);
+  --page-max: 84rem;
+  --reading-measure: 62ch;
+
+  --radius-control: 1.375rem;
+  --radius-sm: 0.75rem;
+  --radius-md: 1.25rem;
+  --radius-lg: 1.75rem;
+  --radius-xl: 2rem;
+  --radius-pill: 999px;
+  --rule: 1px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long: 420ms;
+
+  --z-base: 1;
+  --z-raised: 10;
+  --z-sticky: 200;
+  --z-modal: 400;
+
+  --color-paper: oklch(98.2% 0.006 250);
+  --color-paper-solid: oklch(99.2% 0.003 250);
+  --color-surface: oklch(96% 0.009 250);
+  --color-surface-2: oklch(93.5% 0.015 250);
+  --color-surface-blue: oklch(95% 0.028 250);
+  --color-surface-jelly: oklch(93.5% 0.052 250);
+  --color-surface-jelly-soft: oklch(96.5% 0.025 250);
+  --color-ink: oklch(25% 0.012 250);
+  --color-ink-2: oklch(38% 0.014 250);
+  --color-muted: oklch(48% 0.015 250);
+  --color-rule: oklch(86% 0.012 250);
+  --color-rule-strong: oklch(75% 0.018 250);
+  --color-accent: oklch(52% 0.19 255);
+  --color-accent-hover: oklch(46% 0.18 255);
+  --color-accent-soft: oklch(92% 0.045 255);
+  --color-accent-ink: oklch(98.5% 0.005 250);
+  --color-focus: oklch(23% 0.12 255);
+  --color-success: oklch(55% 0.14 150);
+  --color-error: oklch(52% 0.2 25);
+  --color-overlay: oklch(18% 0.02 250 / 0.72);
+
+  --shadow-whisper: 0 1px 2px oklch(25% 0.015 250 / 0.08);
+  --shadow-float: 0 0.75rem 2.5rem oklch(30% 0.025 250 / 0.14);
+  --shadow-jelly: 0 1.25rem 3rem -1.75rem oklch(38% 0.08 255 / 0.34);
+  --shadow-control: 0 0.5rem 1.25rem -0.75rem oklch(38% 0.08 255 / 0.3);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-width: 20rem;
+  overflow-x: clip;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink-2);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+figure {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+}
+
+img,
+svg {
+  display: block;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

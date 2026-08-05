@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="雅译是一款 Chrome 网页翻译扩展：整页双语对照、划词即译、AI 网页总结、心动跟译与六种译风。">
+  <meta name="theme-color" content="#f8fafd">
+  <title>雅译｜翻译网页，不打断阅读</title>
+  <link rel="icon" type="image/png" href="assets/yeyi-icon-128.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&amp;family=Roboto+Flex:opsz,wght@8..144,500;8..144,600;8..144,700&amp;family=Roboto:wght@400;500;700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="css/page.css">
+  <script>document.documentElement.classList.add("js");</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <header class="site-nav">
+    <div class="nav-inner">
+      <a class="brand" href="#top" aria-label="雅译首页"><img src="assets/yeyi-icon-128.png" width="32" height="32" alt=""><span>雅译</span><small>0.7.1</small></a>
+      <nav class="nav-links" aria-label="页面导航"><a href="#experience">体验</a><a href="#privacy">隐私</a><a href="#install">安装</a></nav>
+      <div class="nav-actions"><a class="nav-source" href="https://github.com/ZhishengZZ/yeyi-translator" target="_blank" rel="noreferrer">GitHub</a><a class="button button--primary button--nav" href="https://github.com/ZhishengZZ/yeyi-translator/releases" target="_blank" rel="noreferrer">下载扩展</a></div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero page-shell" id="top" aria-labelledby="hero-title">
+      <div class="hero-copy hero-enter" style="--enter-order:0">
+        <p class="hero-kicker"><span></span>为 Chrome 做的网页翻译扩展</p>
+        <h1 id="hero-title">翻译网页，<br>不打断阅读。</h1>
+        <p class="hero-lede">译文逐段出现在原文下方。结构、链接和阅读顺序都留在原处，你不需要在页面之间来回切换。</p>
+        <div class="hero-actions"><a class="button button--primary" href="https://github.com/ZhishengZZ/yeyi-translator/releases" target="_blank" rel="noreferrer">下载雅译</a><a class="button button--quiet" href="#experience">直接体验</a></div>
+        <ul class="promise-line"><li>自带模型</li><li>Key 只存本机</li><li>GPL-3.0 开源</li></ul>
+      </div>
+
+      <div class="demo-browser hero-enter" style="--enter-order:1" aria-label="交互式双语阅读演示">
+        <div class="browser-page">
+          <div class="article-meta"><span>双语阅读演示</span><button class="icon-button" id="hero-language" type="button" aria-pressed="true" title="切换双语">中 / EN</button></div>
+          <h2>Tools should stay out of the reader’s way.</h2>
+          <p class="article-deck">A calmer approach to reading and understanding the open web.</p>
+          <div class="article-rule" aria-hidden="true"></div>
+          <div class="bilingual-copy" id="hero-copy-demo">
+            <article><p>Good reading tools preserve context. They help without moving the reader somewhere else.</p><p class="translation">好的阅读工具会保留上下文，在原处提供帮助，而不是把读者带离当前页面。</p></article>
+            <article><p>Translation belongs beside the original, where meaning can be checked at a glance.</p><p class="translation">译文应该紧邻原文，让含义可以随时对照、快速确认。</p></article>
+          </div>
+        </div>
+        <div class="floating-translate"><span class="pulse-heart" aria-hidden="true">♥</span><div><strong>双语翻译已开启</strong><small>2 个段落 · 刚刚完成</small></div><button type="button" id="hero-replay">重译</button></div>
+      </div>
+    </section>
+
+    <section class="quick-read page-shell" aria-label="核心能力概览"><p>阅读留在原网页里。</p><div class="quick-links"><a href="#selection">划词即译</a><a href="#summary">AI 总结</a><a href="#stream">心动跟译</a><a href="#styles">六种译风</a></div></section>
+
+    <section class="experience page-shell" id="experience" aria-labelledby="experience-title">
+      <header class="section-intro"><h2 id="experience-title">不是截图。<br>现在就点一点。</h2><p>每一个演示都保留真实的操作逻辑：选择、等待、结果与状态反馈都能亲手体验。</p></header>
+
+      <article class="feature-row" id="selection">
+        <div class="feature-copy"><p class="step-label">01 · 划词即译</p><p class="feature-lead">点一句话，译文就在旁边。</p><p>阅读位置不会改变。你可以切换句子、复制结果，也能立即看到成功反馈。</p></div>
+        <div class="interactive-shell selection-demo">
+          <div class="demo-head"><span>ARTICLE</span><span>选择一句试试</span></div>
+          <div class="selection-content">
+            <h3>Designing for attention</h3>
+            <button class="selectable-text is-selected" type="button" data-translation="好的界面会降低认知负担，而不是增加负担。">A good interface reduces cognitive load instead of adding to it.</button>
+            <button class="selectable-text" type="button" data-translation="最好的工具会在需要时出现，完成后安静退场。">The best tools appear when needed and become quiet when the job is done.</button>
+            <button class="selectable-text" type="button" data-translation="清晰不是装饰，而是产品对用户时间的尊重。">Clarity is not decoration; it is respect for the user’s time.</button>
+          </div>
+          <div class="translation-popover" aria-live="polite"><div class="popover-top"><span>雅译</span><span>自然中文</span></div><p id="selection-result">好的界面会降低认知负担，而不是增加负担。</p><button class="copy-button" id="copy-translation" type="button">复制译文</button></div>
+        </div>
+      </article>
+
+      <article class="feature-row feature-row--reverse" id="summary">
+        <div class="feature-copy"><p class="step-label">02 · AI 网页总结</p><p class="feature-lead">先抓重点，再决定哪里值得细读。</p><p>选择总结深度，模拟生成当前网页的概览、要点和继续追问入口。</p></div>
+        <div class="interactive-shell summary-demo">
+          <div class="summary-toolbar"><div><span class="gemini-mark" aria-hidden="true">✦</span><strong>网页总结</strong></div><div class="segmented" role="group" aria-label="总结深度"><button class="summary-depth is-active" type="button" data-depth="brief">简洁</button><button class="summary-depth" type="button" data-depth="detail">详细</button></div></div>
+          <div class="summary-source"><span>当前网页</span><strong>Why the open web still matters</strong><small>约 2,840 字 · 预计阅读 9 分钟</small></div>
+          <button class="generate-button" id="generate-summary" type="button"><span>✦</span>重新生成摘要</button>
+          <div class="summary-output" id="summary-output" aria-live="polite"><p class="summary-overview">文章讨论了开放网络的价值：可链接、可验证、可由用户掌控，而不是被封闭平台替代。</p><ul><li>链接让知识可以被追溯与组合</li><li>开放标准降低了发布与访问门槛</li><li>用户应拥有工具与数据的选择权</li></ul></div>
+          <form class="ask-row" id="ask-form"><input id="ask-input" type="text" placeholder="继续追问这张网页…" aria-label="继续追问"><button type="submit">发送</button></form>
+        </div>
+      </article>
+
+      <article class="feature-row" id="stream">
+        <div class="feature-copy"><p class="step-label">03 · 心动跟译</p><p class="feature-lead">新内容出现，译文自动跟上。</p><p>打开跟译后，点击“加载新内容”。雅译会识别动态变化，并把译文插回原有阅读流。</p></div>
+        <div class="interactive-shell stream-demo">
+          <div class="stream-top"><div class="profile"><span>OW</span><div><strong>Open Web Daily</strong><small>@openweb · live</small></div></div><label class="switch"><input id="stream-toggle" type="checkbox" checked><span></span><em>心动跟译</em></label></div>
+          <div class="feed" id="stream-feed"><article class="feed-item"><p>Small tools can make the web feel personal again.</p><p class="feed-translation">小而专注的工具，可以让网络重新拥有个人感。</p></article><article class="feed-item"><p>Software should adapt to the reader, not the other way around.</p><p class="feed-translation">软件应该适应读者，而不是让读者反过来适应软件。</p></article></div>
+          <div class="stream-status"><span class="pulse-heart" aria-hidden="true">♥</span><p id="stream-status">正在监听新内容</p><button id="add-feed" type="button">加载新内容</button></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="style-lab" id="styles" aria-labelledby="styles-title"><div class="page-shell style-lab-inner">
+      <div class="style-copy"><p class="step-label">04 · 六种译风</p><h2 id="styles-title">同一句话，<br>用合适的方式表达。</h2><p>切换后立即看到语气、忠实度和术语选择的差别。</p></div>
+      <div class="style-demo"><div class="style-tabs" role="tablist" aria-label="选择翻译风格"><button class="style-tab is-active" type="button" role="tab" aria-selected="true" data-style="elegant">信达雅</button><button class="style-tab" type="button" role="tab" aria-selected="false" data-style="faithful">精准忠实</button><button class="style-tab" type="button" role="tab" aria-selected="false" data-style="natural">自然中文</button><button class="style-tab" type="button" role="tab" aria-selected="false" data-style="technical">技术文档</button><button class="style-tab" type="button" role="tab" aria-selected="false" data-style="business">商务正式</button><button class="style-tab" type="button" role="tab" aria-selected="false" data-style="literary">文学润色</button></div><div class="style-result" role="tabpanel" aria-live="polite"><span>EN · ORIGINAL</span><p lang="en">Good tools protect the reader’s attention without taking over the page.</p><div class="result-divider" aria-hidden="true"></div><span>ZH · TRANSLATION</span><p id="style-result">好的工具守护读者的注意力，而不喧宾夺主。</p></div></div>
+    </div></section>
+
+    <section class="search-feature page-shell" aria-labelledby="search-title">
+      <div class="search-copy"><p class="step-label">05 · 跨语言搜索</p><h2 id="search-title">中文敲进去，英文帮你搜。</h2><p>输入中文主题，雅译会补出更适合英文资料库的查询表达。</p></div>
+      <div class="search-demo"><form id="search-form"><span aria-hidden="true">⌕</span><input id="search-input" type="text" value="如何设计不打扰阅读的翻译工具" aria-label="搜索主题"><button type="submit">生成英文检索词</button></form><div class="search-result" aria-live="polite"><span>推荐查询</span><strong id="search-query">designing unobtrusive translation tools for focused reading</strong><button id="copy-query" type="button">复制</button></div><div class="search-tags"><button type="button" data-query="网页可访问性设计">网页可访问性</button><button type="button" data-query="浏览器扩展隐私设计">扩展隐私</button><button type="button" data-query="双语阅读界面设计">双语阅读</button></div></div>
+    </section>
+
+    <section class="privacy page-shell" id="privacy" aria-labelledby="privacy-title"><div class="privacy-copy"><p class="step-label">边界清楚，才值得信任</p><h2 id="privacy-title">你的模型，<br>你的 Key，<br>你的边界。</h2><p>雅译没有账号体系，也没有内置 Key。请求只发送到你填写的模型接口，配置保存在本机。</p><a class="text-link" href="https://github.com/ZhishengZZ/yeyi-translator" target="_blank" rel="noreferrer">在 GitHub 查看源码 ↗</a></div><div class="privacy-list"><article><span class="privacy-icon">⌁</span><div><h3>Key 只存本机</h3><p>保存在 chrome.storage.local，不注入网页。</p></div></article><article><span class="privacy-icon">{ }</span><div><h3>原生 JavaScript</h3><p>没有远程脚本，装进去的代码就是实际运行的代码。</p></div></article><article><span class="privacy-icon">↗</span><div><h3>接口由你决定</h3><p>模型服务、地址、模型名称和 API Key 都由你填写。</p></div></article></div></section>
+
+    <section class="install page-shell" id="install" aria-labelledby="install-title"><div class="install-copy"><h2 id="install-title">四步装好，开始翻译。</h2><p>从 Releases 下载并加载已解压的扩展程序。</p><div class="install-actions"><a class="button button--primary" href="https://github.com/ZhishengZZ/yeyi-translator/releases" target="_blank" rel="noreferrer">下载 0.7.1</a><a class="button button--quiet" href="https://github.com/ZhishengZZ/yeyi-translator" target="_blank" rel="noreferrer">查看源码</a></div></div><ol class="install-steps"><li><span>1</span><div><h3>下载并解压</h3><p>从 Releases 获取最新安装包。</p></div></li><li><span>2</span><div><h3>打开扩展管理页</h3><p>进入 chrome://extensions/，开启开发者模式。</p></div></li><li><span>3</span><div><h3>加载扩展</h3><p>选择包含 manifest.json 的文件夹。</p></div></li><li><span>4</span><div><h3>填写模型和 Key</h3><p>保存设置，回到任意网页开始翻译。</p></div></li></ol></section>
+  </main>
+
+  <footer class="site-footer page-shell"><a class="brand" href="#top"><img src="assets/yeyi-icon-128.png" width="28" height="28" alt=""><span>雅译</span></a><nav aria-label="页脚导航"><a href="https://github.com/ZhishengZZ/yeyi-translator" target="_blank" rel="noreferrer">GitHub</a><a href="https://github.com/ZhishengZZ/yeyi-translator/releases" target="_blank" rel="noreferrer">Releases</a><a href="#privacy">隐私</a></nav><p>GPL-3.0 · v0.7.1</p></footer>
+  <div class="toast" id="toast" role="status" aria-live="polite">已复制</div>
+  <script src="js/page.js" defer></script>
+</body>
+</html>
