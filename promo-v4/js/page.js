@@ -28,7 +28,7 @@ async function copyText(text) {
     await navigator.clipboard.writeText(text);
     showToast("已复制到剪贴板");
   } catch {
-    showToast("已选中，可手动复制");
+    showToast("复制失败，请手动选择文字");
   }
 }
 
@@ -61,12 +61,12 @@ $("#copy-translation")?.addEventListener("click", () => copyText(selectionResult
 
 const summaries = {
   brief: {
-    overview: "文章讨论了开放网络的价值：可链接、可验证、可由用户掌控，而不是被封闭平台替代。",
-    points: ["链接让知识可以被追溯与组合", "开放标准降低了发布与访问门槛", "用户应拥有工具与数据的选择权"]
+    overview: "文章介绍了睡眠如何帮助大脑整理和巩固记忆，并解释了规律作息为何比临时补觉更有效。",
+    points: ["深度睡眠有助于稳定新形成的记忆", "快速眼动睡眠参与情绪与经验的整合", "固定作息比周末集中补觉更可靠"]
   },
   detail: {
-    overview: "作者从链接机制、开放标准和用户自主权三个层面说明开放网络为何仍然重要，并指出封闭平台虽然便利，却会削弱内容的可迁移性和长期可访问性。",
-    points: ["超链接建立了跨站点的知识关系，也让论据可以被复核", "HTML、URL 等开放标准允许任何人发布和访问内容", "本地优先工具让用户保留模型、数据与工作流的控制权", "设计应减少平台锁定，并保留导出和迁移路径"]
+    overview: "作者从记忆形成、情绪调节和生物钟三个方面说明睡眠的重要性，并指出稳定的睡眠节律比偶尔延长睡眠时间更能支持长期记忆。",
+    points: ["深度睡眠帮助大脑重新整理当天接收的信息", "快速眼动睡眠会把新经验与既有记忆联系起来", "睡眠不足会削弱注意力，使学习效率下降", "固定起床时间有助于维持稳定的睡眠节律"]
   }
 };
 let summaryDepth = "brief";
@@ -86,7 +86,7 @@ $("#generate-summary")?.addEventListener("click", (event) => {
   if (!output) return;
   event.currentTarget.disabled = true;
   output.classList.add("is-loading");
-  output.textContent = "✦ 正在阅读并整理这张网页…";
+  output.textContent = "✦ 正在阅读并整理当前网页…";
   window.setTimeout(() => {
     output.classList.remove("is-loading");
     renderSummary();
@@ -99,15 +99,15 @@ $("#ask-form")?.addEventListener("submit", (event) => {
   if (!input?.value.trim()) return;
   const output = $("#summary-output");
   if (output) {
-    output.innerHTML = `<p class="summary-overview"><strong>根据当前网页：</strong>开放网络最关键的优势，是内容可以被链接、验证和迁移，用户不必把阅读与数据永久交给单一平台。</p>`;
+    output.innerHTML = `<p class="summary-overview"><strong>根据这篇文章：</strong>睡眠不只是休息，大脑会在不同睡眠阶段整理新信息、连接已有经验，并稳定刚刚形成的记忆。</p>`;
   }
   input.value = "";
 });
 
 const feedVariants = [
-  ["A translation should feel like part of the page, not an interruption.", "好的翻译应该像页面的一部分，而不是一次打断。"],
-  ["Readers trust tools that explain what is happening.", "读者会更信任那些清楚说明当前状态的工具。"],
-  ["The interface becomes calmer when every element has a clear job.", "当每个元素都有明确职责时，界面自然会更平静。"]
+  ["Small routines are easier to keep when they have a clear place in the day.", "一件小事在每天都有固定位置时，更容易长期坚持。"],
+  ["Quiet spaces can restore attention more effectively than constant stimulation.", "安静的空间比持续不断的刺激更能恢复注意力。"],
+  ["Good rest begins before bedtime, with the way the day is arranged.", "真正的休息在入睡前就已经开始，它取决于一天如何安排。"]
 ];
 let feedIndex = 0;
 const streamToggle = $("#stream-toggle");
@@ -124,32 +124,32 @@ $("#add-feed")?.addEventListener("click", (event) => {
   feed.append(item);
   item.scrollIntoView({ behavior: "smooth", block: "nearest" });
   if (!streamToggle?.checked) {
-    status.textContent = "跟译已暂停，新内容保持原文";
+    status.textContent = "跟译已暂停，新内容保留原文";
     item.querySelector(".feed-translation")?.remove();
     return;
   }
   trigger.disabled = true;
-  status.textContent = "发现新内容，正在翻译";
+  status.textContent = "正在翻译新内容";
   window.setTimeout(() => {
     const translation = item.querySelector(".feed-translation");
     if (translation) translation.textContent = translated;
     item.classList.remove("is-translating");
-    status.textContent = "翻译完成，继续监听";
+    status.textContent = "新内容已翻译";
     trigger.disabled = false;
   }, 650);
 });
 streamToggle?.addEventListener("change", () => {
   const status = $("#stream-status");
-  if (status) status.textContent = streamToggle.checked ? "正在监听新内容" : "跟译已暂停";
+  if (status) status.textContent = streamToggle.checked ? "跟译已开启" : "跟译已暂停";
 });
 
 const styleCopy = {
-  elegant: "好的工具守护读者的注意力，而不喧宾夺主。",
-  faithful: "好的工具会保护读者的注意力，同时不占据页面的主导位置。",
-  natural: "好工具应该让人专心阅读，而不是抢走页面的存在感。",
-  technical: "优质工具应保护读者的注意力资源，并避免干扰页面主体。",
-  business: "优秀的工具应保障读者专注，同时避免影响页面主体内容。",
-  literary: "真正好用的工具，只替你守住专注，不替页面喧哗。"
+  elegant: "雨意柔化了城市，每一盏街灯都化作静静的倒影。",
+  faithful: "雨水让城市显得柔和，并让每一盏街灯都变成安静的倒影。",
+  natural: "一场雨让城市柔和下来，街灯映在水面上，安安静静。",
+  technical: "降雨降低了城市景观的视觉锐度，使各处街灯形成清晰的反射影像。",
+  business: "雨后城市氛围更显柔和，街灯倒影为夜间景观增添了宁静感。",
+  literary: "雨把城市轻轻放低，每一盏街灯，都在水中沉默地亮着。"
 };
 const styleTabs = $$(".style-tab");
 const styleResult = $("#style-result");
@@ -183,17 +183,17 @@ styleTabs.forEach((tab, index) => {
 });
 
 const queryMap = {
-  "网页可访问性设计": "web accessibility design patterns for readable interfaces",
-  "浏览器扩展隐私设计": "privacy-first architecture for browser extensions",
-  "双语阅读界面设计": "bilingual reading interface design best practices",
-  "如何设计不打扰阅读的翻译工具": "designing unobtrusive translation tools for focused reading"
+  "如何提高睡眠质量": "evidence-based ways to improve sleep quality",
+  "睡眠与记忆的关系": "relationship between sleep and memory consolidation",
+  "适合新手的城市徒步路线": "beginner-friendly urban walking routes",
+  "家庭咖啡烘焙方法": "home coffee roasting methods and techniques"
 };
 function generateQuery() {
   const input = $("#search-input");
   const result = $("#search-query");
   if (!input || !result) return;
   const value = input.value.trim();
-  result.textContent = queryMap[value] || `${value || "focused reading"} · English research query`;
+  result.textContent = queryMap[value] || `English sources and research about ${value || "focused reading"}`;
 }
 $("#search-form")?.addEventListener("submit", (event) => { event.preventDefault(); generateQuery(); });
 $$('.search-tags button').forEach((button) => button.addEventListener("click", () => {
